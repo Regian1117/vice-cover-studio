@@ -23,20 +23,20 @@ export const studioState = {
   layoutId: 'hero-slant-6',
   gradeId: 'vice-sunset',
   borderStyle: 'cream',
-  presetId: 'vice-sunset',
+  presetId: 'sunset-gold',
   paintStrength: 0.72,
   inkStrength: 0.58,
   gradeStrength: 0.86,
-  halftoneStrength: 0.24,
-  title: 'VICE HORIZON',
+  halftoneStrength: 0.22,
+  title: 'PALM HORIZON',
   script: 'Sunset Syndicate',
-  pressQuote: '★★★★★  "PURE SUNSET ADRENALINE" — VICE WEEKLY',
-  tagline: 'EVERY STREET HAS A PRICE',
-  badge: 'VOL. 06',
-  editionPill: "COLLECTOR'S EDITION",
+  pressQuote: '★★★★★ "A COASTAL FEVER DREAM" — COASTAL PRESS',
+  tagline: 'ORIGINAL COVER ART — SHOT ON YOUR CAMERA',
+  badge: '',
+  editionPill: '',
   titleStyle: 'sunset-extrude',
-  titlePosition: 'docked-bottom',
-  showLocationStamps: true,
+  titlePosition: 'overlay-bottom',
+  showLocationStamps: false,
   showPressQuote: true,
   showHeatStars: true,
   heatStars: 5,
@@ -220,6 +220,7 @@ function bindStudioDom() {
     panelGradeSelect: 'panel-grade-select',
     panelStampInput: 'panel-stamp-input',
     activePanelBadge: 'active-panel-badge',
+    stagePanelChip: 'stage-panel-chip',
     captionTitle: 'caption-title-input',
     captionScript: 'caption-script-input',
     pressQuote: 'press-quote-input',
@@ -450,7 +451,9 @@ function syncPanelInspectorUI() {
   if (!p) return;
   const geom = lastGeometries[studioState.selectedPanel];
   const photoEntry = photoMap.get(p.photoId);
-  dom.activePanelBadge.textContent = `Panel ${studioState.selectedPanel + 1}${geom ? ' · ' + geom.label : ''}`;
+  const chipLabel = `Panel ${studioState.selectedPanel + 1}${geom ? ' · ' + geom.label : ''}`;
+  dom.activePanelBadge.textContent = chipLabel;
+  if (dom.stagePanelChip) dom.stagePanelChip.textContent = chipLabel;
   dom.zoomSlider.value = String(Math.round((p.zoom || 1) * 100));
   dom.zoomVal.textContent = `${(p.zoom || 1).toFixed(2)}×`;
   dom.panXSlider.value = String(Math.round((p.panX || 0) * 100));
@@ -544,11 +547,11 @@ function applyQuickPreset(presetId) {
 }
 
 const SURPRISE_TITLES = [
-  { title: 'VICE HORIZON', script: 'Sunset Syndicate', tagline: 'EVERY STREET HAS A PRICE', badge: 'VOL. 06' },
-  { title: 'NEON OVERDRIVE', script: 'After Midnight', tagline: 'NO BRAKES AFTER DARK', badge: 'NIGHT ED.' },
-  { title: 'PALM SYNDICATE', script: 'Sun, Chrome & Trouble', tagline: 'SUN, CHROME & TROUBLE', badge: 'VOL. 06' },
+  { title: 'PALM HORIZON', script: 'Sunset Syndicate', tagline: '100% ORIGINAL COVER ART — SHOT ON YOUR CAMERA', badge: '' },
+  { title: 'NEON OVERDRIVE', script: 'After Midnight', tagline: '100% ORIGINAL COVER ART — SHOT ON YOUR CAMERA', badge: '' },
+  { title: 'COASTAL HEAT', script: 'Sun & Chrome', tagline: '100% ORIGINAL COVER ART — SHOT ON YOUR CAMERA', badge: 'VOL. 06' },
   { title: 'OCEAN HIGHWAY', script: 'Golden Strip', tagline: 'FAST CARS & LATE NIGHTS', badge: 'DELUXE' },
-  { title: 'SOLAR BAYOUT', script: 'Vice Shores', tagline: 'RULE THE WATERFRONT', badge: 'LIMITED' },
+  { title: 'SOLAR BAYOUT', script: 'Sunset Shores', tagline: 'RULE THE WATERFRONT', badge: 'LIMITED' },
 ];
 
 function randomizeCoverDesign() {
@@ -563,16 +566,17 @@ function randomizeCoverDesign() {
   studioState.gradeId = grade.id;
   studioState.borderStyle = pick(['cream', 'white']);
   studioState.titleStyle = grade.id === 'midnight-neon' ? 'neon-chrome' : grade.id === 'golden-heatwave' ? 'golden-heat' : pick(styles);
-  studioState.titlePosition = 'docked-bottom';
+  studioState.titlePosition = 'overlay-bottom';
   studioState.title = copy.title;
   studioState.script = copy.script;
   studioState.tagline = copy.tagline;
   studioState.badge = copy.badge;
+  studioState.editionPill = '';
   studioState.showFooterStrip = true;
   studioState.showStarburst = true;
   studioState.showHeatStars = true;
   studioState.showPressQuote = true;
-  studioState.showLocationStamps = true;
+  studioState.showLocationStamps = false;
 
   const ids = [...photoMap.keys()];
   for (let i = ids.length - 1; i > 0; i--) {
@@ -665,17 +669,6 @@ function wireInteractions() {
       await uploadUserPhotos(files, files.length === 1 ? 'single' : 'multi');
     } catch {
       setStatus('Could not decode one of the selected images');
-    }
-    e.target.value = '';
-  });
-
-  document.getElementById('single-photo-all-input').addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      await uploadUserPhotos([file], 'single');
-    } catch {
-      setStatus('Could not decode that image file');
     }
     e.target.value = '';
   });
@@ -942,6 +935,7 @@ function applyQueryOverrides() {
   if (params.has('starburstText')) studioState.starburstText = params.get('starburstText');
   if (params.has('stamps')) studioState.showLocationStamps = params.get('stamps') !== '0';
   if (params.has('showQuote')) studioState.showPressQuote = params.get('showQuote') !== '0';
+  if (params.has('heat')) studioState.showHeatStars = params.get('heat') !== '0';
 
   const photosParam = params.get('photos');
   if (photosParam) {
@@ -976,18 +970,44 @@ async function bootStudio() {
 
   const heroOrder = [
     'boulevard',
-    'supercar',
+    'pier-candid',
     'protagonist-dusk',
+    'supercar',
     'neon-motel-rider',
     'coast-aerial',
-    'yacht-chase',
     'neon-strip',
-    'bay-chopper',
-    'protagonist-dusk',
+    'yacht-chase',
   ].filter((id) => photoMap.has(id));
   distributePhotosAcrossPanels(heroOrder.length ? heroOrder : [...photoMap.keys()]);
 
   applyQueryOverrides();
+  if (studioState.layoutId === 'hero-slant-6' && studioState.sizeId === 'landscape') {
+    if (studioState.panels[3]?.photoId === 'supercar') {
+      studioState.panels[3].panY = -0.14;
+      studioState.panels[3].zoom = 1.08;
+    }
+    if (studioState.panels[4]?.photoId === 'neon-motel-rider') {
+      studioState.panels[4].panY = -0.12;
+      studioState.panels[4].zoom = 1.06;
+    }
+    if (studioState.panels[5]?.photoId === 'coast-aerial') {
+      studioState.panels[5].panY = -0.08;
+      studioState.panels[5].zoom = 1.05;
+    }
+  } else if (studioState.layoutId === 'hero-slant-6' && studioState.sizeId === 'square') {
+    if (studioState.panels[3]?.photoId === 'supercar') {
+      studioState.panels[3].panY = -0.12;
+      studioState.panels[3].zoom = 1.08;
+    }
+    if (studioState.panels[4]?.photoId === 'coast-aerial') {
+      studioState.panels[4].panY = -0.08;
+      studioState.panels[4].zoom = 1.06;
+    }
+    if (studioState.panels[5]?.photoId === 'neon-strip') {
+      studioState.panels[5].panY = -0.06;
+      studioState.panels[5].zoom = 1.06;
+    }
+  }
   recordHistory(true);
   renderLiveCoverCanvas();
 

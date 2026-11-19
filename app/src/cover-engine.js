@@ -174,16 +174,16 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
   const base = Math.min(width, height);
   const aspect = width / height;
 
-  const outerFrame = Math.round(base * 0.017);
-  const gutterPx = Math.max(10, Math.round(base * 0.015));
+  const outerFrame = Math.round(base * 0.020);
+  const gutterPx = Math.max(12, Math.round(base * 0.0175));
   const grade = getGradeById(state.gradeId);
   const borderStyle = getBorderStyleById(state.borderStyle || 'cream');
-  const pos = state.titlePosition || 'docked-bottom';
+  const pos = state.titlePosition || 'overlay-bottom';
 
   const showFooter = state.showFooterStrip !== false;
-  const footerH = showFooter ? Math.round(height * (aspect > 1.25 ? 0.082 : aspect < 0.9 ? 0.072 : 0.078)) : 0;
+  const footerH = showFooter ? Math.round(height * (aspect > 1.25 ? 0.072 : aspect < 0.9 ? 0.062 : 0.068)) : 0;
 
-  // Dedicated Title Stage Band keeps ALL 6-9 panels completely unobstructed & readable at 768x480
+  // In full-bleed 'overlay-bottom' default, panels span 100% down to the thin palm footer (no blank band!).
   const dockedTitleH = pos === 'docked-bottom'
     ? Math.round(height * (aspect > 1.25 ? 0.215 : aspect < 0.9 ? 0.205 : 0.215))
     : 0;
@@ -334,7 +334,7 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
   ctx.strokeRect(outerFrame + 0.5, outerFrame + 0.5, width - outerFrame * 2 - 1, height - outerFrame * 2 - 1);
   ctx.restore();
 
-  // 7) Title Stage Band + 3D Title + Neon Script + Press Quote + Large Gold Sunburst + Badges + Footer
+  // 7) Giant 3D Typography + Neon Script + Press Quote + Large Gold Sunburst + Clean Badge + Footer
   renderCoverTypographyAndBadges(
     ctx,
     width,
@@ -347,32 +347,6 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
     topReservePx,
     gutterPx,
   );
-
-  // 8) Preview-only panel selection pill (never rendered in exported PNG)
-  if (showSelection && geometries[state.selectedPanel]) {
-    const sel = geometries[state.selectedPanel];
-    const pillText = `PANEL ${state.selectedPanel + 1} · ${sel.label.toUpperCase()}`;
-    ctx.save();
-    const fs = Math.max(12, Math.round(base * 0.015));
-    ctx.font = `600 ${fs}px "Barlow", sans-serif`;
-    const tw = ctx.measureText(pillText).width;
-    const pw = tw + 18;
-    const ph = fs + 11;
-    const px = Math.min(width - outerFrame - pw - 10, Math.max(outerFrame + 12, sel.bounds.x + sel.bounds.w - pw - 10));
-    const py = Math.min(mosaicBottom - ph - 10, Math.max(mosaicTop + 10, sel.bounds.y + 10));
-    ctx.fillStyle = 'rgba(14, 9, 26, 0.90)';
-    ctx.beginPath();
-    ctx.roundRect(px, py, pw, ph, 5);
-    ctx.fill();
-    ctx.strokeStyle = grade.accentColor;
-    ctx.lineWidth = 1.6;
-    ctx.stroke();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(pillText, px + 9, py + ph * 0.52);
-    ctx.restore();
-  }
 
   ctx.restore();
   return geometries;

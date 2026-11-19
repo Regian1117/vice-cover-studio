@@ -61,11 +61,11 @@ export const MULTI_PANEL_LAYOUTS = [
       if (aspect > 1.22) {
         return [
           { id: 0, label: 'Hero', role: 'hero', points: [[0.0, 0.0], [0.385, 0.0], [0.345, 1.0], [0.0, 1.0]] },
-          { id: 1, label: 'Top Center', role: 'action', points: [[0.385, 0.0], [0.710, 0.0], [0.685, 0.505], [0.365, 0.535]] },
-          { id: 2, label: 'Top Right', role: 'portrait', points: [[0.710, 0.0], [1.0, 0.0], [1.0, 0.475], [0.685, 0.505]] },
-          { id: 3, label: 'Bot Left', role: 'detail', points: [[0.365, 0.535], [0.585, 0.515], [0.555, 1.0], [0.345, 1.0]] },
-          { id: 4, label: 'Bot Mid', role: 'skyline', points: [[0.585, 0.515], [0.805, 0.495], [0.785, 1.0], [0.555, 1.0]] },
-          { id: 5, label: 'Bot Right', role: 'closeup', points: [[0.805, 0.495], [1.0, 0.475], [1.0, 1.0], [0.785, 1.0]] },
+          { id: 1, label: 'Top Center', role: 'action', points: [[0.385, 0.0], [0.710, 0.0], [0.688, 0.455], [0.368, 0.485]] },
+          { id: 2, label: 'Top Right', role: 'portrait', points: [[0.710, 0.0], [1.0, 0.0], [1.0, 0.425], [0.688, 0.455]] },
+          { id: 3, label: 'Bot Left', role: 'detail', points: [[0.368, 0.485], [0.585, 0.465], [0.555, 1.0], [0.345, 1.0]] },
+          { id: 4, label: 'Bot Mid', role: 'skyline', points: [[0.585, 0.465], [0.805, 0.445], [0.785, 1.0], [0.555, 1.0]] },
+          { id: 5, label: 'Bot Right', role: 'closeup', points: [[0.805, 0.445], [1.0, 0.425], [1.0, 1.0], [0.785, 1.0]] },
         ];
       }
       if (aspect < 0.90) {
@@ -76,12 +76,12 @@ export const MULTI_PANEL_LAYOUTS = [
         ], 0.032);
       }
       return [
-        { id: 0, label: 'Hero', role: 'hero', points: [[0.0, 0.0], [0.47, 0.0], [0.43, 0.63], [0.0, 0.66]] },
-        { id: 1, label: 'Top Right', role: 'action', points: [[0.47, 0.0], [1.0, 0.0], [1.0, 0.32], [0.45, 0.34]] },
-        { id: 2, label: 'Mid Right', role: 'portrait', points: [[0.45, 0.34], [1.0, 0.32], [1.0, 0.64], [0.43, 0.63]] },
-        { id: 3, label: 'Bot Left', role: 'detail', points: [[0.0, 0.66], [0.35, 0.64], [0.32, 1.0], [0.0, 1.0]] },
-        { id: 4, label: 'Bot Mid', role: 'skyline', points: [[0.35, 0.64], [0.69, 0.635], [0.67, 1.0], [0.32, 1.0]] },
-        { id: 5, label: 'Bot Right', role: 'closeup', points: [[0.69, 0.635], [1.0, 0.64], [1.0, 1.0], [0.67, 1.0]] },
+        { id: 0, label: 'Hero', role: 'hero', points: [[0.0, 0.0], [0.47, 0.0], [0.43, 0.59], [0.0, 0.62]] },
+        { id: 1, label: 'Top Right', role: 'action', points: [[0.47, 0.0], [1.0, 0.0], [1.0, 0.29], [0.45, 0.31]] },
+        { id: 2, label: 'Mid Right', role: 'portrait', points: [[0.45, 0.31], [1.0, 0.29], [1.0, 0.58], [0.43, 0.59]] },
+        { id: 3, label: 'Bot Left', role: 'detail', points: [[0.0, 0.62], [0.35, 0.60], [0.32, 1.0], [0.0, 1.0]] },
+        { id: 4, label: 'Bot Mid', role: 'skyline', points: [[0.35, 0.60], [0.69, 0.585], [0.67, 1.0], [0.32, 1.0]] },
+        { id: 5, label: 'Bot Right', role: 'closeup', points: [[0.69, 0.585], [1.0, 0.58], [1.0, 1.0], [0.67, 1.0]] },
       ];
     },
   },

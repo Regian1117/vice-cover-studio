@@ -281,7 +281,7 @@ html, body {
 /* 3-Column Studio Workspace */
 .workspace {
   display: grid;
-  grid-template-columns: 256px minmax(0, 1fr) 288px;
+  grid-template-columns: 252px minmax(0, 1fr) 316px;
   height: calc(100vh - 54px);
   min-height: 0;
   overflow: hidden;
@@ -345,7 +345,7 @@ html, body {
 /* Photos Library & Upload Controls */
 .upload-row {
   display: grid;
-  grid-template-columns: 1.65fr 1fr;
+  grid-template-columns: 1fr;
   gap: 6px;
   margin-bottom: 7px;
 }
@@ -837,8 +837,18 @@ input[type="range"].range-pink::-webkit-slider-thumb {
 .stage-hint {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+}
+
+.stage-panel-chip {
+  font-size: 11px;
+  font-weight: 700;
+  color: #14081E;
+  background: var(--accent-gold);
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
 }
 
 .hint-text {
@@ -861,6 +871,12 @@ input[type="range"].range-pink::-webkit-slider-thumb {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
+}
+
+.control-grid-3 {
+  display: grid;
+  grid-template-columns: 0.78fr 1.05fr 1.05fr;
+  gap: 5px;
 }
 
 .compact-top {
@@ -895,7 +911,7 @@ input[type="range"].range-pink::-webkit-slider-thumb {
   border: 1px solid var(--border-strong);
   background: var(--bg-input);
   color: #FFFFFF;
-  font: 600 11.5px/1 var(--font-ui);
+  font: 600 11px/1 var(--font-ui);
   caret-color: var(--accent-cyan);
   outline: none;
   transition: border-color 140ms ease;

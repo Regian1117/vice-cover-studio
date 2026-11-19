@@ -144,10 +144,10 @@ export function computeAutoLevelsParams(buf, width, height) {
   const low = pLow * 0.68;
   const high = 255 - (255 - pHigh) * 0.72;
   const invRange = 255 / Math.max(52, high - low);
-  // Bring overly bright photos gently toward twilight and lift deep night midtones slightly for panel cohesion
+  // Bring bright daytime photos toward golden-hour dusk and lift deep night shadows for panel cohesion
   let duskGamma = 1.0;
-  if (medianLum > 124) {
-    duskGamma = 1 + Math.min(0.40, ((medianLum - 122) / 133) * 0.62);
+  if (medianLum > 122) {
+    duskGamma = 1 + Math.min(0.48, ((medianLum - 120) / 135) * 0.72);
   } else if (medianLum < 88) {
     duskGamma = 1 - Math.min(0.18, ((88 - medianLum) / 88) * 0.24);
   }
@@ -155,16 +155,17 @@ export function computeAutoLevelsParams(buf, width, height) {
   return { low, invRange, duskGamma, shadowLift };
 }
 
-// Smooth continuous skin-hue protection weight [0..0.52] to keep skin tones natural under strong sunset/neon LUTs
+// Smooth continuous skin-hue protection weight [0..0.72] to protect warm skin & natural undershirt/shirt tones
+// while only shifting strong daytime sky/water blues
 function computeSkinProtection(r, g, b, luma) {
-  if (luma < 0.18 || luma > 0.88) return 0;
+  if (luma < 0.14 || luma > 0.92) return 0;
   const rg = r - g;
   const rb = r - b;
-  if (rg <= 0.015 || rb <= 0.055) return 0;
-  const warmthGate = clamp01((rb - 0.055) / 0.14);
-  const balanceGate = clamp01((rg - 0.015) / 0.10) * clamp01(1 - Math.max(0, rg - 0.28) / 0.24);
-  const lumaGate = clamp01((luma - 0.18) / 0.18) * clamp01((0.90 - luma) / 0.20);
-  return 0.52 * warmthGate * balanceGate * lumaGate;
+  if (rg <= 0.008 || rb <= 0.035) return 0;
+  const warmthGate = clamp01((rb - 0.035) / 0.11);
+  const balanceGate = clamp01((rg - 0.008) / 0.08) * clamp01(1 - Math.max(0, rg - 0.32) / 0.24);
+  const lumaGate = clamp01((luma - 0.14) / 0.16) * clamp01((0.94 - luma) / 0.20);
+  return 0.72 * warmthGate * balanceGate * lumaGate;
 }
 
 // Auto-levels + cel tonal quantization + smooth skin-guarded 3-way grade + Sobel ink + subtle halftone
@@ -195,8 +196,8 @@ export function applyViceColorGradeAndInk(
 
   const { low, invRange, duskGamma, shadowLift } = computeAutoLevelsParams(painted, width, height);
   const paintMix = clamp01(paintStrength);
-  const posterMix = paintMix * 0.30;
-  const levels = 8.0;
+  const levels = 11.0;
+  const posterMix = paintMix * 0.20;
   const inkAlphaMax = clamp01(inkStrength) * 0.74;
   const inkThresholdLow = 44;
   const inkThresholdHigh = 142;
@@ -253,7 +254,21 @@ export function applyViceColorGradeAndInk(
       ng = luma + (ng - luma) * adaptiveSat + warm * 0.06;
       nb = luma + (nb - luma) * adaptiveSat - warm * 0.18;
 
-      // 3-way split-tone Vice City grade scaled by gradeMix
+      // Daylight-to-Sunset Harmonizer: converts cool bright midday sky/water blues smoothly into golden-magenta sunset
+      // while leaving warm facial skin & neutral whites cleanly guarded
+      const blueExcess = clamp01((nb - nr - 0.06) / 0.20);
+      const brightGate = clamp01((luma - 0.32) / 0.26);
+      const skyShift = blueExcess * brightGate * (1 - skinKeep) * gradeMix * 0.68;
+      if (skyShift > 0.005) {
+        const targetR = clamp01((mr * 0.52 + hr * 0.48) / 255) * 0.92;
+        const targetG = clamp01((mg * 0.52 + hg * 0.48) / 255) * 0.92;
+        const targetB = clamp01((mb * 0.52 + hb * 0.48) / 255) * 0.92;
+        nr = nr * (1 - skyShift) + targetR * skyShift;
+        ng = ng * (1 - skyShift) + targetG * skyShift;
+        nb = nb * (1 - skyShift) + targetB * skyShift;
+      }
+
+      // 3-way split-tone sunset/neon grade scaled by gradeMix
       const lum = clamp01(nr * 0.299 + ng * 0.587 + nb * 0.114);
       const skinGuard = 1 - skinKeep;
       const shadowW = Math.pow(1 - lum, 2.05) * grade.shadowMix * gradeMix * skinGuard;
