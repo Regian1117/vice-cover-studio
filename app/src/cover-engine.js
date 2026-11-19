@@ -55,24 +55,43 @@ export function drawPanelPhoto(ctx, styledCanvas, panelBounds, panelState, photo
   ctx.restore();
 }
 
-// Render subtle per-panel inner shadow + crisp comic ink border
-function drawPanelFrameChrome(ctx, pts, gutterPx, isSelected, showSelection, accentColor) {
+// Render crisp inner cream-white comic rim + heavy matte-black ink gutter + optional live selection highlight
+function drawPanelFrameChrome(ctx, pts, gutterPx, isSelected, showSelection, accentColor, base) {
+  const rimPx = Math.max(1.5, Math.min(2.6, base * 0.0022));
+
+  // 1) Inside-clipped crisp inner comic rim along the panel perimeter
+  ctx.save();
+  tracePolygon(ctx, pts);
+  ctx.clip();
+  ctx.lineJoin = 'miter';
+
+  // Cream-white inner hairline right inside the black gutter (keeps dark adjacent panels crisp)
+  ctx.lineWidth = gutterPx + rimPx * 2;
+  ctx.strokeStyle = 'rgba(255, 248, 236, 0.80)';
+  ctx.stroke();
+
+  if (showSelection && isSelected) {
+    ctx.lineWidth = gutterPx + rimPx * 2 + Math.max(5, gutterPx * 0.48);
+    ctx.strokeStyle = accentColor;
+    ctx.stroke();
+    ctx.lineWidth = gutterPx + rimPx * 2;
+    ctx.strokeStyle = 'rgba(255, 248, 236, 0.90)';
+    ctx.stroke();
+  }
+
+  // Seal panel edge inside clip with matte ink black
+  ctx.lineWidth = gutterPx;
+  ctx.strokeStyle = '#08060D';
+  ctx.stroke();
+  ctx.restore();
+
+  // 2) Full-width matte black comic gutter over polygon boundary
   ctx.save();
   tracePolygon(ctx, pts);
   ctx.lineJoin = 'miter';
   ctx.lineWidth = gutterPx;
   ctx.strokeStyle = '#08060D';
   ctx.stroke();
-
-  if (showSelection && isSelected) {
-    ctx.save();
-    tracePolygon(ctx, pts);
-    ctx.clip();
-    ctx.lineWidth = Math.max(6, gutterPx * 0.72);
-    ctx.strokeStyle = accentColor;
-    ctx.stroke();
-    ctx.restore();
-  }
   ctx.restore();
 }
 
@@ -91,13 +110,18 @@ export function renderCoverPoster(canvas, state, photoMap, options = {}) {
   const gutterPx = Math.max(10, Math.round(base * 0.0145));
   const grade = getGradeById(state.gradeId);
 
+  const aspect = width / height;
+  const showFooter = state.showFooterStrip !== false;
+  const footerH = showFooter ? Math.round(base * (aspect > 1.25 ? 0.088 : 0.082)) : 0;
+  const bottomReservePx = footerH > 0 ? footerH + Math.round(gutterPx * 0.45) : 0;
+
   // 1) Matte poster ink base
   ctx.save();
   ctx.fillStyle = '#08060D';
   ctx.fillRect(0, 0, width, height);
 
-  // 2) Compute multi-panel polygon geometry
-  const geometries = computeLayoutGeometry(state.layoutId, width, height, outerFrame);
+  // 2) Compute multi-panel polygon geometry above the collector footer strip
+  const geometries = computeLayoutGeometry(state.layoutId, width, height, outerFrame, bottomReservePx);
 
   // 3) Render each stylized photo clipped cleanly to its dynamic angled polygon
   for (let i = 0; i < geometries.length; i++) {
@@ -124,12 +148,15 @@ export function renderCoverPoster(canvas, state, photoMap, options = {}) {
         effectiveGradeId,
         state.paintStrength,
         state.inkStrength,
+        state.halftoneStrength ?? 0.32,
         isExport,
       );
       drawPanelPhoto(ctx, styled, geom.bounds, pState, photoEntry);
     } else {
-      // Rich dark placeholder gradient if no photo loaded
-      const pg = ctx.createLinearGradient(geom.bounds.x, geom.bounds.y, geom.bounds.x + geom.bounds.w, geom.bounds.y + geom.bounds.h);
+      const pg = ctx.createLinearGradient(
+        geom.bounds.x, geom.bounds.y,
+        geom.bounds.x + geom.bounds.w, geom.bounds.y + geom.bounds.h,
+      );
       pg.addColorStop(0, '#1A1328');
       pg.addColorStop(1, '#2D1430');
       ctx.fillStyle = pg;
@@ -149,7 +176,7 @@ export function renderCoverPoster(canvas, state, photoMap, options = {}) {
     ctx.restore();
   }
 
-  // 4) Draw crisp heavy matte-black comic gutters + outer frame border
+  // 4) Draw crisp inner white comic rim + heavy matte-black comic gutters
   for (let i = 0; i < geometries.length; i++) {
     drawPanelFrameChrome(
       ctx,
@@ -158,35 +185,25 @@ export function renderCoverPoster(canvas, state, photoMap, options = {}) {
       i === state.selectedPanel,
       showSelection,
       grade.accentColor,
+      base,
     );
   }
 
-  // Crisp outer poster matte frame
-  ctx.lineWidth = outerFrame * 2;
-  ctx.strokeStyle = '#08060D';
-  ctx.strokeRect(0, 0, width, height);
-
-  // Subtle hair-thin colored accent inner trim inside the black border (editorial luxury touch)
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.09)';
-  ctx.lineWidth = Math.max(1.5, base * 0.0016);
-  ctx.strokeRect(outerFrame + 1, outerFrame + 1, width - outerFrame * 2 - 2, height - outerFrame * 2 - 2);
-  ctx.restore();
-
-  // 5) Unified atmospheric Vice City sunset/neon light-leak cohesion sweep across panels
+  // 5) Unified atmospheric Vice City sunset/neon light-leak cohesion sweep across panel area
+  const panelAreaH = height - outerFrame * 2 - bottomReservePx;
   ctx.save();
   ctx.beginPath();
-  ctx.rect(outerFrame, outerFrame, width - outerFrame * 2, height - outerFrame * 2);
+  ctx.rect(outerFrame, outerFrame, width - outerFrame * 2, panelAreaH);
   ctx.clip();
 
-  const leak = ctx.createLinearGradient(0, 0, width, height);
+  const leak = ctx.createLinearGradient(0, 0, width, panelAreaH);
   leak.addColorStop(0, grade.lightLeak[0]);
   leak.addColorStop(0.5, grade.lightLeak[1]);
   leak.addColorStop(1, grade.lightLeak[2]);
   ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = 0.38;
+  ctx.globalAlpha = 0.36;
   ctx.fillStyle = leak;
-  ctx.fillRect(outerFrame, outerFrame, width - outerFrame * 2, height - outerFrame * 2);
+  ctx.fillRect(outerFrame, outerFrame, width - outerFrame * 2, panelAreaH);
 
   // Collector print micro-grain overlay
   const grainCanvas = getPosterGrainCanvas();
@@ -195,14 +212,26 @@ export function renderCoverPoster(canvas, state, photoMap, options = {}) {
     ctx.globalCompositeOperation = 'overlay';
     ctx.globalAlpha = 0.22;
     ctx.fillStyle = pattern;
-    ctx.fillRect(outerFrame, outerFrame, width - outerFrame * 2, height - outerFrame * 2);
+    ctx.fillRect(outerFrame, outerFrame, width - outerFrame * 2, panelAreaH);
   }
   ctx.restore();
 
-  // 6) Monumental original GTA-inspired typography, neon script, tagline & corner stamp
-  renderCoverTypography(ctx, width, height, outerFrame, state);
+  // 6) Crisp outer poster matte frame border
+  ctx.lineWidth = outerFrame * 2;
+  ctx.strokeStyle = '#08060D';
+  ctx.strokeRect(0, 0, width, height);
 
-  // 7) Preview-only subtle panel number pill on selected panel (placed at lower-left of panel to avoid corner badges!)
+  // Subtle cream hairline inside outer matte frame (editorial print finish)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 248, 236, 0.28)';
+  ctx.lineWidth = Math.max(1.5, base * 0.0018);
+  ctx.strokeRect(outerFrame + 0.5, outerFrame + 0.5, width - outerFrame * 2 - 1, height - outerFrame * 2 - 1);
+  ctx.restore();
+
+  // 7) Collector Footer Strip, Gutter Starburst, Monumental AAA Logo, Neon Script & Badges
+  renderCoverTypography(ctx, width, height, outerFrame, state, geometries, footerH, gutterPx);
+
+  // 8) Preview-only subtle panel number pill on selected panel (never drawn on exported PNG!)
   if (showSelection && geometries[state.selectedPanel]) {
     const sel = geometries[state.selectedPanel];
     const pillText = `PANEL ${state.selectedPanel + 1} · ${sel.label.toUpperCase()}`;
@@ -213,7 +242,10 @@ export function renderCoverPoster(canvas, state, photoMap, options = {}) {
     const pw = tw + 18;
     const ph = fs + 11;
     const px = Math.min(width - outerFrame - pw - 10, Math.max(outerFrame + 12, sel.bounds.x + 12));
-    const py = Math.min(height - outerFrame - ph - 12, Math.max(outerFrame + 12, sel.bounds.y + sel.bounds.h - ph - 12));
+    const py = Math.min(
+      height - outerFrame - bottomReservePx - ph - 12,
+      Math.max(outerFrame + 12, sel.bounds.y + sel.bounds.h - ph - 12),
+    );
     ctx.fillStyle = 'rgba(10, 8, 18, 0.88)';
     ctx.beginPath();
     ctx.roundRect(px, py, pw, ph, 5);

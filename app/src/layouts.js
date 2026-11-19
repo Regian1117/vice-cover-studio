@@ -112,23 +112,23 @@ export const LAYOUT_PRESETS = [
         return [
           {
             id: 0, label: 'Hero', role: 'hero',
-            points: [[0.0, 0.0], [0.48, 0.0], [0.44, 1.0], [0.0, 1.0]],
+            points: [[0.0, 0.0], [0.46, 0.0], [0.42, 1.0], [0.0, 1.0]],
           },
           {
             id: 1, label: 'Top Mid', role: 'action',
-            points: [[0.48, 0.0], [0.76, 0.0], [0.74, 0.50], [0.46, 0.52]],
+            points: [[0.46, 0.0], [0.75, 0.0], [0.73, 0.51], [0.44, 0.53]],
           },
           {
             id: 2, label: 'Top Right', role: 'skyline',
-            points: [[0.76, 0.0], [1.0, 0.0], [1.0, 0.48], [0.74, 0.50]],
+            points: [[0.75, 0.0], [1.0, 0.0], [1.0, 0.49], [0.73, 0.51]],
           },
           {
             id: 3, label: 'Bot Mid', role: 'portrait',
-            points: [[0.46, 0.52], [0.73, 0.50], [0.71, 1.0], [0.44, 1.0]],
+            points: [[0.44, 0.53], [0.72, 0.51], [0.70, 1.0], [0.42, 1.0]],
           },
           {
             id: 4, label: 'Bot Right', role: 'closeup',
-            points: [[0.73, 0.50], [1.0, 0.48], [1.0, 1.0], [0.71, 1.0]],
+            points: [[0.72, 0.51], [1.0, 0.49], [1.0, 1.0], [0.70, 1.0]],
           },
         ];
       }
@@ -325,14 +325,14 @@ export function getLayoutById(layoutId) {
 }
 
 // Compute pixel-space polygon points and bounding box for every panel inside the poster frame
-export function computeLayoutGeometry(layoutId, width, height, outerFramePx) {
+export function computeLayoutGeometry(layoutId, width, height, outerFramePx, bottomReservePx = 0) {
   const layout = getLayoutById(layoutId);
   const aspect = width / height;
   const rawPanels = layout.getPanels(aspect);
   const innerX = outerFramePx;
   const innerY = outerFramePx;
   const innerW = width - outerFramePx * 2;
-  const innerH = height - outerFramePx * 2;
+  const innerH = Math.max(120, height - outerFramePx * 2 - bottomReservePx);
 
   return rawPanels.map((panel) => {
     const pts = panel.points.map(([nx, ny]) => [
@@ -359,6 +359,52 @@ export function computeLayoutGeometry(layoutId, width, height, outerFramePx) {
       },
     };
   });
+}
+
+// Find an interior gutter intersection point furthest from title lockup & corner badges for the starburst stamp
+export function findStarburstAnchor(geometries, width, height, titlePosition, outerFramePx = 0, bottomReservePx = 0) {
+  const panelAreaBottom = height - outerFramePx - bottomReservePx;
+  const marginX = Math.max(60, width * 0.14);
+  const minY = outerFramePx + Math.max(50, (panelAreaBottom - outerFramePx) * 0.14);
+  const maxY = panelAreaBottom - Math.max(50, (panelAreaBottom - outerFramePx) * 0.14);
+
+  // Deduplicate interior vertices and count how many panels touch each vertex
+  const candidates = [];
+  for (const geom of geometries) {
+    for (const [vx, vy] of geom.pts) {
+      if (vx <= outerFramePx + marginX * 0.5 || vx >= width - outerFramePx - marginX * 0.5) continue;
+      if (vy <= minY || vy >= maxY) continue;
+      const existing = candidates.find((c) => Math.hypot(c.x - vx, c.y - vy) < 16);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        candidates.push({ x: vx, y: vy, count: 1 });
+      }
+    }
+  }
+
+  if (!candidates.length) {
+    return { x: width * 0.44, y: (outerFramePx + panelAreaBottom) * 0.48 };
+  }
+
+  const nyTarget = titlePosition === 'top-banner' ? 0.68 : titlePosition === 'center-emblem' ? 0.28 : 0.46;
+  const targetY = outerFramePx + (panelAreaBottom - outerFramePx) * nyTarget;
+
+  let best = candidates[0];
+  let bestScore = -Infinity;
+  for (const c of candidates) {
+    const nx = c.x / width;
+    // Prefer shared T/cross intersections near hero seam & vertical target zone away from headline
+    let score = c.count * 2.2 - Math.abs(c.y - targetY) / (height * 0.25);
+    if (nx >= 0.35 && nx <= 0.62) score += 2.0;
+    if (titlePosition === 'top-banner' && c.y < outerFramePx + (panelAreaBottom - outerFramePx) * 0.36) score -= 6.0;
+    if (titlePosition !== 'top-banner' && c.y > panelAreaBottom - height * 0.28) score -= 6.0;
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  return { x: best.x, y: best.y };
 }
 
 // Point-in-polygon hit test in canvas pixel space

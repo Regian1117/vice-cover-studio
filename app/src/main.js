@@ -22,6 +22,8 @@ const paintSlider = document.getElementById('paint-slider');
 const paintVal = document.getElementById('paint-val');
 const inkSlider = document.getElementById('ink-slider');
 const inkVal = document.getElementById('ink-val');
+const halftoneSlider = document.getElementById('halftone-slider');
+const halftoneVal = document.getElementById('halftone-val');
 const zoomSlider = document.getElementById('zoom-slider');
 const zoomVal = document.getElementById('zoom-val');
 const rotateSlider = document.getElementById('rotate-slider');
@@ -35,10 +37,16 @@ const badgeText = document.getElementById('badge-text');
 const titleStyle = document.getElementById('title-style');
 const titlePosition = document.getElementById('title-position');
 const toggleStars = document.getElementById('toggle-stars');
+const toggleFooter = document.getElementById('toggle-footer');
+const toggleStarburst = document.getElementById('toggle-starburst');
 const activePanelBadge = document.getElementById('active-panel-badge');
 const statusLine = document.getElementById('status-line');
 const exportPrimaryBtn = document.getElementById('export-primary');
 const exportPrimaryLabel = document.getElementById('export-primary-label');
+const exportAllBtn = document.getElementById('export-all-3');
+const btnUndo = document.getElementById('btn-undo');
+const btnRedo = document.getElementById('btn-redo');
+const btnSurprise = document.getElementById('btn-surprise');
 const dropOverlay = document.getElementById('drop-overlay');
 const stageFrame = document.getElementById('stage-frame');
 
@@ -48,14 +56,21 @@ let lastGeometries = [];
 let renderScheduled = false;
 let dragState = null;
 
+// Undo / Redo snapshot stack
+const MAX_HISTORY = 30;
+const undoStack = [];
+const redoStack = [];
+let inputUndoTimer = null;
+
 // Core application state
 const state = {
   sizeId: 'landscape',
-  layoutId: 'vice-mosaic-6',
+  layoutId: 'classic-box-5',
   gradeId: 'miami-sunset',
   presetId: 'sunset-chase',
   paintStrength: 0.72,
   inkStrength: 0.58,
+  halftoneStrength: 0.32,
   title: 'VICE HORIZON',
   script: 'Miami Sunset',
   tagline: 'EVERY STREET HAS A PRICE',
@@ -64,6 +79,9 @@ const state = {
   titlePosition: 'bottom-center',
   showHeatStars: true,
   heatStars: 5,
+  showFooterStrip: true,
+  showStarburst: true,
+  starburstText: 'ORIGINAL EDITION',
   selectedPanel: 0,
   panels: Array.from({ length: 6 }, () => ({
     photoId: null,
@@ -75,6 +93,62 @@ const state = {
     gradeOverride: '',
   })),
 };
+
+function cloneStateSnapshot() {
+  return JSON.stringify(state);
+}
+
+function updateHistoryButtons() {
+  if (btnUndo) btnUndo.disabled = undoStack.length <= 1;
+  if (btnRedo) btnRedo.disabled = redoStack.length === 0;
+}
+
+function recordHistory(forceImmediate = true) {
+  const snap = cloneStateSnapshot();
+  if (undoStack.length && undoStack[undoStack.length - 1] === snap) {
+    updateHistoryButtons();
+    return;
+  }
+  undoStack.push(snap);
+  if (undoStack.length > MAX_HISTORY) undoStack.shift();
+  redoStack.length = 0;
+  if (forceImmediate) updateHistoryButtons();
+}
+
+function scheduleDebouncedHistory() {
+  clearTimeout(inputUndoTimer);
+  inputUndoTimer = setTimeout(() => recordHistory(true), 320);
+}
+
+function restoreSnapshot(snapJson) {
+  const parsed = JSON.parse(snapJson);
+  const prevSize = state.sizeId;
+  Object.assign(state, parsed);
+  if (state.sizeId !== prevSize) {
+    updateCanvasDimensions(document.body.classList.contains('shot-cover-only'));
+  }
+  syncTypographyInputs();
+  syncStaticActiveStates();
+  populateSwapSelect();
+  scheduleRender();
+  updateHistoryButtons();
+}
+
+function undoAction() {
+  if (undoStack.length <= 1) return;
+  const current = undoStack.pop();
+  redoStack.push(current);
+  restoreSnapshot(undoStack[undoStack.length - 1]);
+  setStatus('Undid last change');
+}
+
+function redoAction() {
+  if (!redoStack.length) return;
+  const next = redoStack.pop();
+  undoStack.push(next);
+  restoreSnapshot(next);
+  setStatus('Redid change');
+}
 
 function setStatus(msg) {
   statusLine.textContent = msg;
@@ -91,7 +165,6 @@ function updateCanvasDimensions(isCoverOnlyShot = false) {
     canvas.height = spec.height;
     return;
   }
-  // High-DPI crisp preview dimensions scaled cleanly for 60fps interactive response
   const previewScale = spec.width > spec.height ? 1280 / spec.width : 1080 / Math.max(spec.width, spec.height);
   canvas.width = Math.round(spec.width * previewScale);
   canvas.height = Math.round(spec.height * previewScale);
@@ -111,7 +184,6 @@ function scheduleRender() {
   });
 }
 
-// Build SVG mini preview icon for each multi-panel layout
 function buildLayoutSvg(layout) {
   const panels = layout.getPanels(1.5);
   const polys = panels
@@ -124,7 +196,6 @@ function buildLayoutSvg(layout) {
 }
 
 function renderStaticControls() {
-  // Quick presets in topbar
   presetBar.innerHTML = '';
   for (const preset of QUICK_PRESETS) {
     const grade = getGradeById(preset.gradeId);
@@ -133,11 +204,13 @@ function renderStaticControls() {
     btn.className = 'preset-pill' + (state.presetId === preset.id ? ' active' : '');
     btn.dataset.preset = preset.id;
     btn.innerHTML = `<span class="preset-dot" style="background:linear-gradient(135deg,${grade.swatches[1]},${grade.swatches[2]})"></span>${preset.label}`;
-    btn.addEventListener('click', () => applyQuickPreset(preset.id));
+    btn.addEventListener('click', () => {
+      applyQuickPreset(preset.id);
+      recordHistory();
+    });
     presetBar.appendChild(btn);
   }
 
-  // Size switcher in topbar
   sizeSwitcher.innerHTML = '';
   for (const spec of EXPORT_SIZES) {
     const btn = document.createElement('button');
@@ -151,12 +224,12 @@ function renderStaticControls() {
       updateCanvasDimensions(false);
       syncStaticActiveStates();
       scheduleRender();
+      recordHistory();
       setStatus(`Canvas ${spec.label}`);
     });
     sizeSwitcher.appendChild(btn);
   }
 
-  // Multi-panel layouts
   layoutGrid.innerHTML = '';
   for (const layout of LAYOUT_PRESETS) {
     const btn = document.createElement('button');
@@ -172,12 +245,12 @@ function renderStaticControls() {
       syncStaticActiveStates();
       populateSwapSelect();
       scheduleRender();
+      recordHistory();
       setStatus(`Layout: ${layout.name} (${count} panels)`);
     });
     layoutGrid.appendChild(btn);
   }
 
-  // Vice City Color Grades
   gradeGrid.innerHTML = '';
   for (const grade of COLOR_GRADES) {
     const btn = document.createElement('button');
@@ -190,12 +263,12 @@ function renderStaticControls() {
       state.presetId = '';
       syncStaticActiveStates();
       scheduleRender();
+      recordHistory();
       setStatus(`Grade: ${grade.name}`);
     });
     gradeGrid.appendChild(btn);
   }
 
-  // Per-panel grade dropdown
   panelGradeSelect.innerHTML = '<option value="">Match Global</option>';
   for (const grade of COLOR_GRADES) {
     const opt = document.createElement('option');
@@ -263,6 +336,7 @@ function renderPhotoTray() {
       p.flipH = false;
       renderPhotoTray();
       scheduleRender();
+      recordHistory();
       setStatus(`Assigned ${entry.label} to Panel ${state.selectedPanel + 1}`);
     });
     photoTray.appendChild(btn);
@@ -290,10 +364,14 @@ function syncTypographyInputs() {
   titleStyle.value = state.titleStyle;
   titlePosition.value = state.titlePosition;
   toggleStars.checked = state.showHeatStars;
+  toggleFooter.checked = state.showFooterStrip;
+  toggleStarburst.checked = state.showStarburst;
   paintSlider.value = String(Math.round(state.paintStrength * 100));
   paintVal.textContent = `${Math.round(state.paintStrength * 100)}%`;
   inkSlider.value = String(Math.round(state.inkStrength * 100));
   inkVal.textContent = `${Math.round(state.inkStrength * 100)}%`;
+  halftoneSlider.value = String(Math.round((state.halftoneStrength ?? 0.32) * 100));
+  halftoneVal.textContent = `${Math.round((state.halftoneStrength ?? 0.32) * 100)}%`;
 }
 
 // Fill all panels smartly using ONE photo with distinct dynamic crops & framings
@@ -318,7 +396,7 @@ function applySinglePhotoAutoFill(photoId) {
   scheduleRender();
 }
 
-// Distribute all available photos across the 6 panel slots with curated framing
+// Distribute all available photos across the panel slots cleanly
 function distributePhotosAcrossPanels(photoIds) {
   if (!photoIds.length) return;
   for (let i = 0; i < state.panels.length; i++) {
@@ -346,6 +424,7 @@ function applyQuickPreset(presetId) {
   state.layoutId = preset.layoutId;
   state.paintStrength = preset.paintStrength;
   state.inkStrength = preset.inkStrength;
+  state.halftoneStrength = preset.halftoneStrength ?? 0.32;
   state.title = preset.title;
   state.script = preset.script;
   state.tagline = preset.tagline;
@@ -354,6 +433,9 @@ function applyQuickPreset(presetId) {
   state.titlePosition = preset.titlePosition;
   state.showHeatStars = preset.showHeatStars;
   state.heatStars = preset.heatStars;
+  state.showFooterStrip = preset.showFooterStrip ?? true;
+  state.showStarburst = preset.showStarburst ?? true;
+  state.starburstText = preset.starburstText || 'ORIGINAL EDITION';
 
   const layout = getLayoutById(state.layoutId);
   if (state.selectedPanel >= layout.panelCount) state.selectedPanel = 0;
@@ -363,6 +445,53 @@ function applyQuickPreset(presetId) {
   populateSwapSelect();
   scheduleRender();
   setStatus(`Preset: ${preset.label}`);
+}
+
+const SURPRISE_TITLES = [
+  { title: 'VICE HORIZON', script: 'Miami Sunset', tagline: 'EVERY STREET HAS A PRICE', badge: 'VOL. 06' },
+  { title: 'NEON OVERDRIVE', script: 'Midnight Coast', tagline: 'NO BRAKES AFTER DARK', badge: 'NIGHT ED.' },
+  { title: 'PALM SYNDICATE', script: 'Coastal Heat', tagline: 'SUN, CHROME & TROUBLE', badge: 'EST. 2026' },
+  { title: 'OCEAN HIGHWAY', script: 'Golden Strip', tagline: 'FAST CARS & LATE NIGHTS', badge: 'DELUXE' },
+  { title: 'SOLAR BAYOUT', script: 'Vice Shores', tagline: 'RULE THE WATERFRONT', badge: 'LIMITED' },
+  { title: 'MIDNIGHT HEIST', script: 'After Hours', tagline: 'TRUST NO ONE ON THE STRIP', badge: 'NOIR CUT' },
+];
+
+function randomizeCoverDesign() {
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const layout = pick(LAYOUT_PRESETS);
+  const grade = pick(COLOR_GRADES);
+  const copy = pick(SURPRISE_TITLES);
+  const styles = ['sunset-extrude', 'neon-chrome', 'noir-gold', 'clean-ink'];
+  const positions = ['bottom-center', 'top-banner', 'bottom-left'];
+
+  state.presetId = '';
+  state.layoutId = layout.id;
+  state.gradeId = grade.id;
+  state.titleStyle = grade.id === 'neon-vice' ? 'neon-chrome' : grade.id === 'vice-noir' ? 'noir-gold' : pick(styles);
+  state.titlePosition = pick(positions);
+  state.title = copy.title;
+  state.script = copy.script;
+  state.tagline = copy.tagline;
+  state.badge = copy.badge;
+  state.showFooterStrip = true;
+  state.showStarburst = true;
+  state.showHeatStars = true;
+  state.halftoneStrength = 0.28 + Math.round(Math.random() * 14) / 100;
+
+  const ids = [...photoMap.keys()];
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  distributePhotosAcrossPanels(ids);
+  if (state.selectedPanel >= layout.panelCount) state.selectedPanel = 0;
+
+  syncTypographyInputs();
+  syncStaticActiveStates();
+  populateSwapSelect();
+  scheduleRender();
+  recordHistory();
+  setStatus(`Surprise: ${layout.name} · ${grade.name}`);
 }
 
 async function readUserFileAsPhoto(file) {
@@ -375,36 +504,56 @@ async function readUserFileAsPhoto(file) {
   const img = await loadImageElement(dataUrl);
   const id = `user-${userPhotoSeq++}`;
   const label = file.name.replace(/\.[^.]+$/, '').slice(0, 18) || `Photo ${userPhotoSeq}`;
-  const entry = { id, label, src: dataUrl, isSample: false, img, defaultFocus: { panX: 0, panY: 0, zoom: 1.05 } };
+  const entry = { id, label, src: dataUrl, isSample: false, img, focalX: 0.5, focalY: 0.42 };
   photoMap.set(id, entry);
   return entry;
 }
 
-function exportPngBySize(sizeId) {
-  const spec = getSizeSpec(sizeId);
-  setStatus(`Rendering ${spec.label} PNG...`);
-  const exportCanvas = renderExportCanvas(state, photoMap, spec.width, spec.height);
-  const slug = (state.title || 'vice-cover')
+function triggerPngDownload(exportCanvas, filename) {
+  return new Promise((resolve) => {
+    exportCanvas.toBlob((blob) => {
+      if (!blob) { resolve(false); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      resolve(true);
+    }, 'image/png');
+  });
+}
+
+function makeExportSlug() {
+  return (state.title || 'vice-cover')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '') || 'vice-cover';
-  const filename = `${slug}-${spec.width}x${spec.height}.png`;
-
-  exportCanvas.toBlob((blob) => {
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-    setStatus(`Exported ${filename}`);
-  }, 'image/png');
 }
 
-// Convert client pointer coordinates to canvas internal pixel coordinates
+async function exportPngBySize(sizeId) {
+  const spec = getSizeSpec(sizeId);
+  setStatus(`Rendering ${spec.label} PNG...`);
+  const exportCanvas = renderExportCanvas(state, photoMap, spec.width, spec.height);
+  const filename = `${makeExportSlug()}-${spec.width}x${spec.height}.png`;
+  await triggerPngDownload(exportCanvas, filename);
+  setStatus(`Exported ${filename}`);
+}
+
+async function exportAllThreeSizes() {
+  const slug = makeExportSlug();
+  for (const spec of EXPORT_SIZES) {
+    setStatus(`Exporting ${spec.label}...`);
+    const exportCanvas = renderExportCanvas(state, photoMap, spec.width, spec.height);
+    const filename = `${slug}-${spec.width}x${spec.height}.png`;
+    await triggerPngDownload(exportCanvas, filename);
+    await new Promise((r) => setTimeout(r, 140));
+  }
+  setStatus('Exported all 3 PNG sizes');
+}
+
 function clientToCanvasPoint(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -414,13 +563,18 @@ function clientToCanvasPoint(clientX, clientY) {
 }
 
 function wireInteractions() {
-  // Upload 1 photo -> smart auto-fill all panels
+  btnUndo.addEventListener('click', undoAction);
+  btnRedo.addEventListener('click', redoAction);
+  btnSurprise.addEventListener('click', randomizeCoverDesign);
+  exportAllBtn.addEventListener('click', exportAllThreeSizes);
+
   document.getElementById('upload-single').addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const entry = await readUserFileAsPhoto(file);
       applySinglePhotoAutoFill(entry.id);
+      recordHistory();
       setStatus(`Auto-filled all panels with ${entry.label}`);
     } catch {
       setStatus('Could not decode that image file');
@@ -428,7 +582,6 @@ function wireInteractions() {
     e.target.value = '';
   });
 
-  // Upload multiple photos -> populate panels in sequence
   document.getElementById('upload-multi').addEventListener('change', async (e) => {
     const files = [...(e.target.files || [])];
     if (!files.length) return;
@@ -443,6 +596,7 @@ function wireInteractions() {
       } else {
         distributePhotosAcrossPanels(uploadedIds);
       }
+      recordHistory();
       setStatus(`Loaded ${uploadedIds.length} photo${uploadedIds.length > 1 ? 's' : ''}`);
     } catch {
       setStatus('Could not decode one of the selected images');
@@ -450,7 +604,6 @@ function wireInteractions() {
     e.target.value = '';
   });
 
-  // Replace photo in currently selected panel
   document.getElementById('upload-panel').addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -465,6 +618,7 @@ function wireInteractions() {
       p.flipH = false;
       renderPhotoTray();
       scheduleRender();
+      recordHistory();
       setStatus(`Replaced Panel ${state.selectedPanel + 1} with ${entry.label}`);
     } catch {
       setStatus('Could not decode that image file');
@@ -472,38 +626,47 @@ function wireInteractions() {
     e.target.value = '';
   });
 
-  // Quick fill buttons
   document.getElementById('btn-autofill-one').addEventListener('click', () => {
     const activeId = state.panels[state.selectedPanel]?.photoId || [...photoMap.keys()][0];
     if (!activeId) return;
     applySinglePhotoAutoFill(activeId);
+    recordHistory();
     setStatus('Auto-framed 1 photo across all panels');
   });
 
   document.getElementById('btn-distribute-all').addEventListener('click', () => {
     distributePhotosAcrossPanels([...photoMap.keys()]);
+    recordHistory();
     setStatus('Distributed all photos across panels');
   });
 
-  // Painterly & Ink sliders
   paintSlider.addEventListener('input', () => {
     state.paintStrength = Number(paintSlider.value) / 100;
     paintVal.textContent = `${paintSlider.value}%`;
     scheduleRender();
+    scheduleDebouncedHistory();
   });
 
   inkSlider.addEventListener('input', () => {
     state.inkStrength = Number(inkSlider.value) / 100;
     inkVal.textContent = `${inkSlider.value}%`;
     scheduleRender();
+    scheduleDebouncedHistory();
   });
 
-  // Panel zoom, rotate, flip, swap, grade override, reset
+  halftoneSlider.addEventListener('input', () => {
+    state.halftoneStrength = Number(halftoneSlider.value) / 100;
+    halftoneVal.textContent = `${halftoneSlider.value}%`;
+    scheduleRender();
+    scheduleDebouncedHistory();
+  });
+
   zoomSlider.addEventListener('input', () => {
     const p = state.panels[state.selectedPanel];
     p.zoom = Number(zoomSlider.value) / 100;
     zoomVal.textContent = `${p.zoom.toFixed(2)}×`;
     scheduleRender();
+    scheduleDebouncedHistory();
   });
 
   rotateSlider.addEventListener('input', () => {
@@ -511,12 +674,14 @@ function wireInteractions() {
     p.rotation = Number(rotateSlider.value);
     rotateVal.textContent = `${p.rotation}°`;
     scheduleRender();
+    scheduleDebouncedHistory();
   });
 
   document.getElementById('btn-flip').addEventListener('click', () => {
     const p = state.panels[state.selectedPanel];
     p.flipH = !p.flipH;
     scheduleRender();
+    recordHistory();
     setStatus(`Flipped Panel ${state.selectedPanel + 1}`);
   });
 
@@ -529,6 +694,7 @@ function wireInteractions() {
     p.flipH = false;
     p.gradeOverride = '';
     scheduleRender();
+    recordHistory();
     setStatus(`Reset Panel ${state.selectedPanel + 1} crop`);
   });
 
@@ -544,22 +710,26 @@ function wireInteractions() {
     state.selectedPanel = targetIdx;
     swapSelect.value = '';
     scheduleRender();
+    recordHistory();
     setStatus(`Swapped with Panel ${targetIdx + 1}`);
   });
 
   panelGradeSelect.addEventListener('change', () => {
     state.panels[state.selectedPanel].gradeOverride = panelGradeSelect.value;
     scheduleRender();
+    recordHistory();
   });
 
-  // Live Typography Inputs
-  captionTitle.addEventListener('input', () => { state.title = captionTitle.value; scheduleRender(); });
-  captionScript.addEventListener('input', () => { state.script = captionScript.value; scheduleRender(); });
-  captionTagline.addEventListener('input', () => { state.tagline = captionTagline.value; scheduleRender(); });
-  badgeText.addEventListener('input', () => { state.badge = badgeText.value; scheduleRender(); });
-  titleStyle.addEventListener('change', () => { state.titleStyle = titleStyle.value; scheduleRender(); });
-  titlePosition.addEventListener('change', () => { state.titlePosition = titlePosition.value; scheduleRender(); });
-  toggleStars.addEventListener('change', () => { state.showHeatStars = toggleStars.checked; scheduleRender(); });
+  // Live Typography & Collector Chrome Inputs
+  captionTitle.addEventListener('input', () => { state.title = captionTitle.value; scheduleRender(); scheduleDebouncedHistory(); });
+  captionScript.addEventListener('input', () => { state.script = captionScript.value; scheduleRender(); scheduleDebouncedHistory(); });
+  captionTagline.addEventListener('input', () => { state.tagline = captionTagline.value; scheduleRender(); scheduleDebouncedHistory(); });
+  badgeText.addEventListener('input', () => { state.badge = badgeText.value; scheduleRender(); scheduleDebouncedHistory(); });
+  titleStyle.addEventListener('change', () => { state.titleStyle = titleStyle.value; scheduleRender(); recordHistory(); });
+  titlePosition.addEventListener('change', () => { state.titlePosition = titlePosition.value; scheduleRender(); recordHistory(); });
+  toggleStars.addEventListener('change', () => { state.showHeatStars = toggleStars.checked; scheduleRender(); recordHistory(); });
+  toggleFooter.addEventListener('change', () => { state.showFooterStrip = toggleFooter.checked; scheduleRender(); recordHistory(); });
+  toggleStarburst.addEventListener('change', () => { state.showStarburst = toggleStarburst.checked; scheduleRender(); recordHistory(); });
 
   // Export Buttons
   exportPrimaryBtn.addEventListener('click', () => exportPngBySize(state.sizeId));
@@ -606,6 +776,7 @@ function wireInteractions() {
     if (dragState && e.pointerId === dragState.pointerId) {
       dragState = null;
       canvas.classList.remove('dragging');
+      recordHistory();
     }
   };
   canvas.addEventListener('pointerup', endDrag);
@@ -620,6 +791,7 @@ function wireInteractions() {
     const delta = e.deltaY < 0 ? 0.08 : -0.08;
     p.zoom = Math.max(1.0, Math.min(2.8, (p.zoom || 1) + delta));
     scheduleRender();
+    scheduleDebouncedHistory();
   }, { passive: false });
 
   // Drag & Drop image files directly onto any panel on the canvas
@@ -644,12 +816,14 @@ function wireInteractions() {
         state.panels[hitIdx] = { photoId: entry.id, zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, gradeOverride: '' };
         renderPhotoTray();
         scheduleRender();
+        recordHistory();
         setStatus(`Dropped ${entry.label} into Panel ${hitIdx + 1}`);
       } else {
         const ids = [];
         for (const f of files) ids.push((await readUserFileAsPhoto(f)).id);
         if (ids.length === 1) applySinglePhotoAutoFill(ids[0]);
         else distributePhotosAcrossPanels(ids);
+        recordHistory();
         setStatus(`Dropped ${ids.length} photo${ids.length > 1 ? 's' : ''}`);
       }
     } catch {
@@ -657,8 +831,19 @@ function wireInteractions() {
     }
   });
 
-  // Keyboard shortcuts when not typing in an input
+  // Keyboard shortcuts (Ctrl+Z / Ctrl+Y Undo/Redo + quick panel tools)
   window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) redoAction();
+      else undoAction();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+      e.preventDefault();
+      redoAction();
+      return;
+    }
     if (e.target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
     const layout = getLayoutById(state.layoutId);
     if (e.key >= '1' && e.key <= '6') {
@@ -670,10 +855,12 @@ function wireInteractions() {
     } else if (e.key.toLowerCase() === 'f') {
       state.panels[state.selectedPanel].flipH = !state.panels[state.selectedPanel].flipH;
       scheduleRender();
+      recordHistory();
     } else if (e.key.toLowerCase() === 'r') {
       const p = state.panels[state.selectedPanel];
       p.zoom = 1.05; p.panX = 0; p.panY = 0; p.rotation = 0; p.flipH = false;
       scheduleRender();
+      recordHistory();
     }
   });
 }
@@ -701,6 +888,10 @@ function applyQueryOverrides() {
   if (params.has('titlePosition')) state.titlePosition = params.get('titlePosition');
   if (params.has('paint')) state.paintStrength = Number(params.get('paint'));
   if (params.has('ink')) state.inkStrength = Number(params.get('ink'));
+  if (params.has('halftone')) state.halftoneStrength = Number(params.get('halftone'));
+  if (params.has('footer')) state.showFooterStrip = params.get('footer') !== '0';
+  if (params.has('starburst')) state.showStarburst = params.get('starburst') !== '0';
+  if (params.has('starburstText')) state.starburstText = params.get('starburstText');
 
   const photosParam = params.get('photos');
   if (photosParam) {
@@ -725,7 +916,6 @@ async function boot() {
   renderStaticControls();
   wireInteractions();
 
-  // Wait for bundled local SIL OFL fonts so Canvas text draws with exact display faces
   if (document.fonts && document.fonts.ready) {
     await document.fonts.ready;
   }
@@ -733,28 +923,31 @@ async function boot() {
   const samples = await loadBuiltInSamples();
   for (const s of samples) photoMap.set(s.id, s);
 
-  // Default signature showcase order: Boulevard hero + Supercar + Bay Chopper + Pier + Neon Strip + Boulevard Close-up
-  const defaultOrder = ['boulevard', 'supercar', 'bay-chopper', 'pier', 'neon-strip', 'boulevard']
+  // 5 100% unique photos arranged so NO face or primary silhouette ever hides behind headline or badges!
+  const defaultOrder = ['boulevard', 'supercar', 'pier', 'bay-chopper', 'neon-strip']
     .filter((id) => photoMap.has(id));
   distributePhotosAcrossPanels(defaultOrder);
 
   applyQueryOverrides();
-  // Clean framing polish for default 6-panel landscape showcase (helicopter clear of HEAT badge, sunglasses close-up in panel 6)
-  if (state.layoutId === 'vice-mosaic-6' && state.sizeId === 'landscape') {
-    if (state.panels[2]?.photoId === 'bay-chopper') {
-      state.panels[2].flipH = true;
-      state.panels[2].zoom = 1.02;
+  if (state.layoutId === 'classic-box-5' && state.sizeId === 'landscape') {
+    if (state.panels[2]?.photoId === 'pier') {
+      state.panels[2].panX = 0.05;
+      state.panels[2].panY = 0.15;
+      state.panels[2].zoom = 1.05;
     }
-    if (state.panels[5]?.photoId === 'boulevard') {
-      state.panels[5].zoom = 1.78;
-      state.panels[5].panX = -0.06;
-      state.panels[5].panY = 0.06;
-      state.panels[5].flipH = true;
+    if (state.panels[3]?.photoId === 'bay-chopper') {
+      state.panels[3].flipH = true;
+      state.panels[3].panY = -0.10;
+      state.panels[3].zoom = 1.05;
+    }
+    if (state.panels[4]?.photoId === 'neon-strip') {
+      state.panels[4].panY = -0.10;
+      state.panels[4].zoom = 1.06;
     }
   }
+  recordHistory(true);
   scheduleRender();
 
-  // Expose helper on window for programmatic export testing in desktop Chrome
   window.__viceCoverStudio = {
     exportDataUrl(sizeId) {
       const spec = getSizeSpec(sizeId || state.sizeId);

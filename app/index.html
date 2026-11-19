@@ -10,28 +10,54 @@
   <div id="studio-shell" class="studio-shell">
     <header class="topbar">
       <div class="brand">
-        <svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <svg class="brand-mark" width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="2"/>
           <path d="M11.5 2L9.5 22M10.7 11.5L22 10" stroke="currentColor" stroke-width="2"/>
-          <rect x="3" y="3" width="7.2" height="18" fill="#FF5538" fill-opacity="0.28"/>
+          <rect x="3" y="3" width="7.2" height="18" fill="#FF6242" fill-opacity="0.32"/>
         </svg>
         <span class="brand-name">Vice Cover Studio</span>
       </div>
 
       <div class="topbar-group">
-        <span class="topbar-label">Quick Presets</span>
         <div id="preset-bar" class="preset-bar" role="group" aria-label="Quick presets"></div>
+        <div class="history-group" role="group" aria-label="History and randomize">
+          <button id="btn-undo" class="btn-tool" type="button" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 14L4 9l5-5"/>
+              <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
+            </svg>
+          </button>
+          <button id="btn-redo" class="btn-tool" type="button" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 14l5-5-5-5"/>
+              <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>
+            </svg>
+          </button>
+          <button id="btn-surprise" class="btn-surprise" type="button" title="Randomize layout, Vice grade, title & photo arrangement">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="16 3 21 3 21 8"/>
+              <line x1="4" y1="20" x2="21" y2="3"/>
+              <polyline points="21 16 21 21 16 21"/>
+              <line x1="15" y1="15" x2="21" y2="21"/>
+              <line x1="4" y1="4" x2="9" y2="9"/>
+            </svg>
+            <span>Surprise Me</span>
+          </button>
+        </div>
       </div>
 
       <div class="topbar-actions">
         <div id="size-switcher" class="segmented" role="group" aria-label="Canvas aspect ratio"></div>
         <button id="export-primary" class="btn-primary" type="button">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          <span id="export-primary-label">Export PNG</span>
+          <span id="export-primary-label">Export 1920 × 1080</span>
+        </button>
+        <button id="export-all-3" class="btn-secondary-cta" type="button" title="Export 1920×1080, 1080×1350, and 1080×1080 PNGs in one click">
+          <span>Export All 3</span>
         </button>
       </div>
     </header>
@@ -96,6 +122,13 @@
                 <output id="ink-val" class="num-val">58%</output>
               </span>
               <input id="ink-slider" type="range" min="0" max="100" value="58">
+            </label>
+            <label class="slider-row">
+              <span class="slider-label">
+                <span>Halftone Print</span>
+                <output id="halftone-val" class="num-val">32%</output>
+              </span>
+              <input id="halftone-slider" type="range" min="0" max="100" value="32">
             </label>
           </div>
         </section>
@@ -222,10 +255,20 @@
               </label>
             </div>
 
-            <label class="toggle-row">
-              <input id="toggle-stars" type="checkbox" checked>
-              <span>Show 5-Star Heat Meter</span>
-            </label>
+            <div class="toggle-grid">
+              <label class="toggle-row">
+                <input id="toggle-stars" type="checkbox" checked>
+                <span>5-Star Heat</span>
+              </label>
+              <label class="toggle-row">
+                <input id="toggle-footer" type="checkbox" checked>
+                <span>Footer Strip</span>
+              </label>
+              <label class="toggle-row">
+                <input id="toggle-starburst" type="checkbox" checked>
+                <span>Edition Seal</span>
+              </label>
+            </div>
           </div>
         </section>
 

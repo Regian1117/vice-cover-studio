@@ -1,25 +1,25 @@
 [
   {
     "name": "01-cover-landscape.jpg",
-    "query": "?shot=cover&size=landscape&layout=vice-mosaic-6&grade=miami-sunset&paint=0.72&ink=0.58&title=VICE%20HORIZON&script=Miami%20Sunset&tagline=EVERY%20STREET%20HAS%20A%20PRICE&badge=VOL.%2006&titleStyle=sunset-extrude&titlePosition=bottom-center&photos=boulevard,supercar,bay-chopper,pier,neon-strip,boulevard",
+    "query": "?shot=cover&size=landscape&layout=classic-box-5&grade=miami-sunset&paint=0.72&ink=0.58&halftone=0.32&footer=1&starburst=1&title=VICE%20HORIZON&script=Miami%20Sunset&tagline=EVERY%20STREET%20HAS%20A%20PRICE&badge=VOL.%2006&titleStyle=sunset-extrude&titlePosition=bottom-center&photos=boulevard,supercar,pier,bay-chopper,neon-strip",
     "w": 1280,
     "h": 720
   },
   {
     "name": "02-editor-workspace.jpg",
-    "query": "?size=landscape&layout=vice-mosaic-6&grade=miami-sunset&paint=0.72&ink=0.58&title=VICE%20HORIZON&script=Miami%20Sunset&tagline=EVERY%20STREET%20HAS%20A%20PRICE&badge=VOL.%2006&photos=boulevard,supercar,bay-chopper,pier,neon-strip,boulevard",
+    "query": "?size=landscape&layout=classic-box-5&grade=miami-sunset&paint=0.72&ink=0.58&halftone=0.32&footer=1&starburst=1&title=VICE%20HORIZON&script=Miami%20Sunset&tagline=EVERY%20STREET%20HAS%20A%20PRICE&badge=VOL.%2006&photos=boulevard,supercar,pier,bay-chopper,neon-strip",
     "w": 1280,
     "h": 720
   },
   {
     "name": "03-cover-portrait.jpg",
-    "query": "?shot=cover&size=portrait&layout=classic-box-5&grade=neon-vice&paint=0.76&ink=0.64&title=NEON%20OVERDRIVE&script=Midnight%20Coast&tagline=NO%20BRAKES%20AFTER%20DARK&badge=NIGHT%20ED.&titleStyle=neon-chrome&titlePosition=bottom-center&photos=bay-chopper,neon-strip,boulevard,supercar,pier",
+    "query": "?shot=cover&size=portrait&layout=classic-box-5&grade=neon-vice&paint=0.76&ink=0.64&halftone=0.36&footer=1&starburst=1&starburstText=NIGHT%20EDITION&title=NEON%20OVERDRIVE&script=Midnight%20Coast&tagline=NO%20BRAKES%20AFTER%20DARK&badge=NIGHT%20ED.&titleStyle=neon-chrome&titlePosition=bottom-center&photos=bay-chopper,neon-strip,boulevard,supercar,pier",
     "w": 1024,
     "h": 1280
   },
   {
     "name": "04-cover-square.jpg",
-    "query": "?shot=cover&size=square&layout=action-slash-5&grade=tropical-heat&paint=0.70&ink=0.56&title=PALM%20SYNDICATE&script=Coastal%20Heat&tagline=SUN%2C%20CHROME%20%26%20TROUBLE&badge=EST.%202026&titleStyle=sunset-extrude&titlePosition=top-banner&photos=supercar,boulevard,bay-chopper,pier,neon-strip",
+    "query": "?shot=cover&size=square&layout=action-slash-5&grade=tropical-heat&paint=0.70&ink=0.56&halftone=0.28&footer=1&starburst=1&starburstText=COASTAL%20CUT&title=PALM%20SYNDICATE&script=Coastal%20Heat&tagline=SUN%2C%20CHROME%20%26%20TROUBLE&badge=EST.%202026&titleStyle=sunset-extrude&titlePosition=top-banner&photos=supercar,boulevard,pier,bay-chopper,neon-strip",
     "w": 1080,
     "h": 1080
   }
