@@ -162,10 +162,16 @@
             </label>
           </div>
 
-          <label class="field compact-top">
-            <span>Panel Location Stamp</span>
-            <input id="panel-stamp-input" type="text" maxlength="30" placeholder="OCEAN DRIVE · 6:42 PM">
-          </label>
+          <div class="control-grid-2 compact-top">
+            <label class="field">
+              <span>Role Tag (2 Words)</span>
+              <input id="panel-role-input" type="text" maxlength="18" placeholder="THE DRIVER">
+            </label>
+            <label class="field">
+              <span>Location Stamp</span>
+              <input id="panel-stamp-input" type="text" maxlength="30" placeholder="OCEAN DRIVE · 6:42 PM">
+            </label>
+          </div>
         </section>
       </aside>
 
@@ -199,8 +205,8 @@
 
         <section class="panel-section">
           <div class="section-head">
-            <h2>Color Grade &amp; Art</h2>
-            <div id="panel-border-style-picker" class="border-pills" role="radiogroup" aria-label="Panel border color"></div>
+            <h2>Grade</h2>
+            <div id="panel-border-style-picker" class="border-pills" role="radiogroup" aria-label="Panel border style"></div>
           </div>
 
           <div id="color-grade-swatch-picker" class="grade-grid" role="radiogroup" aria-label="Color grades"></div>
@@ -223,9 +229,9 @@
             <label class="slider-row">
               <span class="slider-label">
                 <span>Grade</span>
-                <output id="grade-intensity-val" class="num-val">86%</output>
+                <output id="grade-intensity-val" class="num-val">92%</output>
               </span>
-              <input id="grade-intensity-slider" class="range-cyan" type="range" min="0" max="100" value="86">
+              <input id="grade-intensity-slider" class="range-cyan" type="range" min="0" max="100" value="92">
             </label>
           </div>
         </section>
@@ -248,19 +254,19 @@
             </div>
 
             <label class="field">
-              <span>5-Star Press Quote</span>
-              <input id="press-quote-input" type="text" maxlength="54" value='★★★★★ "A COASTAL FEVER DREAM" — COASTAL PRESS'>
+              <span>Top Press Quote Bar</span>
+              <input id="press-quote-input" type="text" maxlength="58" value='★★★★★ "PURE GOLDEN-HOUR ADRENALINE" — COASTAL WEEKLY'>
             </label>
 
             <label class="field">
-              <span>Footer Tagline</span>
-              <input id="caption-tagline-input" type="text" maxlength="52" value="ORIGINAL COVER ART — SHOT ON YOUR CAMERA">
+              <span>Tagline Pill</span>
+              <input id="sub-tagline-input" type="text" maxlength="52" value="FIVE STRANGERS · ONE COAST · NO WAY BACK">
             </label>
 
             <div class="control-grid-3">
               <label class="field">
                 <span>Badge</span>
-                <input id="corner-badge-input" type="text" maxlength="16" value="" placeholder="VOL. 06">
+                <input id="corner-badge-input" type="text" maxlength="16" value="VOL. 06" placeholder="VOL. 06">
               </label>
               <label class="field">
                 <span>Title Style</span>
@@ -276,6 +282,7 @@
                 <span>Placement</span>
                 <select id="title-position-select">
                   <option value="overlay-bottom">Full-Bleed</option>
+                  <option value="horizon-band">Horizon Band</option>
                   <option value="docked-bottom">Bottom Band</option>
                   <option value="top-banner">Top Stage</option>
                   <option value="center-emblem">Center</option>
@@ -285,8 +292,8 @@
 
             <div class="toggle-grid">
               <label class="toggle-row">
-                <input id="toggle-location-stamps" type="checkbox">
-                <span>Stamps</span>
+                <input id="toggle-role-tags" type="checkbox" checked>
+                <span>Roles</span>
               </label>
               <label class="toggle-row">
                 <input id="toggle-original-seal" type="checkbox" checked>
@@ -297,7 +304,11 @@
                 <span>Quote</span>
               </label>
               <label class="toggle-row">
-                <input id="toggle-heat-stars" type="checkbox" checked>
+                <input id="toggle-location-stamps" type="checkbox">
+                <span>Stamps</span>
+              </label>
+              <label class="toggle-row">
+                <input id="toggle-heat-stars" type="checkbox">
                 <span>5★ Heat</span>
               </label>
               <label class="toggle-row">

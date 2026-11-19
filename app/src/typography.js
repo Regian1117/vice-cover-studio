@@ -1,10 +1,10 @@
-// Original Poster Typography Engine:
-// - Full-bleed cinema 3D chunky double-bevel display title (~1.6x monumental scale, -2.5° tilt)
-// - Neon brush script subtitle + swoosh directly beneath right side of title
-// - Editable 5-star press review bar
-// - Large high-contrast gold & black-ringed "ORIGINAL COVER ART" sunburst seal
-// - Clean single corner badge or HEAT 5★ indicator
-// - Sleek palm silhouette footer strip with tagline, billing-block credits & barcode (zero trademark terms)
+// Original Poster Typography Engine (v3):
+// - Top Cinematic Press Header Bar (5-star press quote left + VOL. 06 / NOIR CUT badge right)
+// - Optional Horizon Palm & Sunset Band behind center/bottom title
+// - Monumental Striped Retro-Chrome 3D Extruded Title (-2.5 deg) with specular bevel & lens-gleam stars
+// - Glowing Neon Brush Script subtitle + swooshes beneath right of title
+// - Crisp Tagline Pill & large gold "ORIGINAL COVER ART" sunburst seal
+// - Sleek coastal palm silhouette footer bar with billing-block credits & barcode (zero trademark terms)
 
 import { getGradeById, getBorderStyleById } from './grades.js';
 
@@ -82,6 +82,190 @@ function drawPalmSilhouette(ctx, baseX, baseY, heightPx, leanPx, scaleX) {
   ctx.restore();
 }
 
+// Top Cinematic Press Header Bar (clean edge-to-edge header clear of all photos)
+export function renderTopPressHeaderBar(ctx, width, outerFrame, topHeaderH, state, grade, borderStyle) {
+  if (!topHeaderH || topHeaderH <= 0) return;
+
+  const hx = outerFrame;
+  const hy = outerFrame;
+  const hw = width - outerFrame * 2;
+  const hh = topHeaderH;
+  const divColor = borderStyle.thinDivider && borderStyle.dividerColor ? borderStyle.dividerColor : borderStyle.color;
+  const divH = Math.max(2.5, Math.round(hh * 0.065));
+
+  ctx.save();
+  const bg = ctx.createLinearGradient(hx, hy, hx + hw, hy);
+  bg.addColorStop(0, '#0D0817');
+  bg.addColorStop(0.48, '#1B0F30');
+  bg.addColorStop(1, '#0D0817');
+  ctx.fillStyle = bg;
+  ctx.fillRect(hx, hy, hw, hh);
+
+  // Subtle top highlight glow + crisp bottom gold/cream divider line
+  ctx.fillStyle = 'rgba(255, 240, 214, 0.08)';
+  ctx.fillRect(hx, hy, hw, 1.5);
+  ctx.fillStyle = divColor;
+  ctx.fillRect(hx, hy + hh - divH, hw, divH);
+
+  const contentH = hh - divH;
+  const cy = hy + contentH * 0.5;
+  const padSide = Math.round(hw * 0.016);
+  let rightUsedW = padSide;
+
+  // Optional right-side collector pill inside the top header bar (at most 1 clean badge)
+  const badgeClean = (state.badge || '').trim().toUpperCase();
+  if (badgeClean) {
+    const bfs = Math.max(12, Math.round(contentH * 0.50));
+    ctx.font = `700 ${bfs}px "Bebas Neue", sans-serif`;
+    const bTrack = Math.round(bfs * 0.08);
+    const bw = measureTextTracked(ctx, badgeClean, bTrack) + Math.round(bfs * 1.15);
+    const bh = Math.round(contentH * 0.68);
+    const bx = hx + hw - padSide - bw;
+    const by = cy - bh * 0.5;
+    const skew = 6;
+
+    ctx.beginPath();
+    ctx.moveTo(bx + skew, by);
+    ctx.lineTo(bx + bw, by);
+    ctx.lineTo(bx + bw - skew, by + bh);
+    ctx.lineTo(bx, by + bh);
+    ctx.closePath();
+    ctx.fillStyle = grade.badgeBg;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = divColor;
+    ctx.stroke();
+
+    ctx.fillStyle = grade.badgeFg;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    drawTextTracked(ctx, badgeClean, bx + bw * 0.5, by + bh * 0.54, bTrack, 'fill');
+    rightUsedW += bw + Math.round(bfs * 0.8);
+  } else if (state.showHeatStars && (state.heatStars ?? 0) > 0) {
+    const hfs = Math.max(12, Math.round(contentH * 0.46));
+    const heatTxt = `HEAT ${'★'.repeat(Math.min(5, state.heatStars))}`;
+    ctx.font = `700 ${hfs}px "Bebas Neue", sans-serif`;
+    const hwTxt = measureTextTracked(ctx, heatTxt, hfs * 0.07);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = grade.accentColor;
+    drawTextTracked(ctx, heatTxt, hx + hw - padSide, cy + 1, hfs * 0.07, 'fill');
+    rightUsedW += hwTxt + Math.round(hfs * 0.9);
+  }
+
+  // Left-aligned 5-star press quote
+  const quoteClean = (state.pressQuote || '').trim().toUpperCase();
+  if (quoteClean) {
+    const maxQuoteW = hw - padSide - rightUsedW - Math.round(hw * 0.02);
+    let qfs = Math.max(12, Math.round(contentH * 0.50));
+    let qTrack = Math.round(qfs * 0.08);
+    ctx.font = `700 ${qfs}px "Bebas Neue", sans-serif`;
+    while (measureTextTracked(ctx, quoteClean, qTrack) > maxQuoteW && qfs > 10) {
+      qfs -= 1;
+      qTrack = Math.round(qfs * 0.06);
+      ctx.font = `700 ${qfs}px "Bebas Neue", sans-serif`;
+    }
+
+    const starMatch = quoteClean.match(/^([★☆]+\s*)(.*)$/);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    let qx = hx + padSide;
+    if (starMatch) {
+      const stars = starMatch[1];
+      const rest = starMatch[2];
+      ctx.fillStyle = '#FFD447';
+      drawTextTracked(ctx, stars, qx, cy + 1, qTrack, 'fill');
+      qx += measureTextTracked(ctx, stars, qTrack);
+      ctx.fillStyle = '#FAF6EE';
+      drawTextTracked(ctx, rest, qx, cy + 1, qTrack, 'fill');
+    } else {
+      ctx.fillStyle = '#FAF6EE';
+      drawTextTracked(ctx, quoteClean, qx, cy + 1, qTrack, 'fill');
+    }
+  }
+  ctx.restore();
+}
+
+// Coastal Sunset & Palm Horizon Band behind title (used by 'horizon-band' placement)
+export function renderHorizonSkylineBand(ctx, width, outerFrame, stageTop, bandH, gutterPx, grade, borderStyle) {
+  if (!bandH || bandH <= 0) return;
+
+  const bx = outerFrame;
+  const bw = width - outerFrame * 2;
+  const divColor = borderStyle.thinDivider && borderStyle.dividerColor ? borderStyle.dividerColor : borderStyle.color;
+  const divH = Math.max(3, Math.round(gutterPx * 0.42));
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(bx, stageTop, bw, bandH);
+  ctx.clip();
+
+  const skyG = ctx.createLinearGradient(0, stageTop, 0, stageTop + bandH);
+  skyG.addColorStop(0, '#1B0A2E');
+  skyG.addColorStop(0.45, grade.footerGradient[1] || '#8F1E4E');
+  skyG.addColorStop(1, grade.footerGradient[2] || '#FF8A32');
+  ctx.fillStyle = skyG;
+  ctx.fillRect(bx, stageTop, bw, bandH);
+
+  // Retro glowing striped sunset disc behind title
+  const sunX = bx + bw * 0.5;
+  const sunY = stageTop + bandH * 0.90;
+  const sunR = bandH * 0.72;
+  const halo = ctx.createRadialGradient(sunX, sunY - sunR * 0.25, sunR * 0.15, sunX, sunY, sunR * 1.9);
+  halo.addColorStop(0, 'rgba(255, 226, 130, 0.55)');
+  halo.addColorStop(0.5, 'rgba(255, 72, 128, 0.28)');
+  halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(bx, stageTop, bw, bandH);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, sunR, Math.PI, 0);
+  ctx.closePath();
+  for (let s = 0; s < 5; s++) {
+    const sy = stageTop + bandH * (0.42 + s * 0.105);
+    const sh = Math.max(3, bandH * (0.018 + s * 0.008));
+    ctx.rect(sunX - sunR - 2, sy, sunR * 2 + 4, sh);
+  }
+  ctx.clip('evenodd');
+  const sg = ctx.createLinearGradient(0, sunY - sunR, 0, sunY);
+  sg.addColorStop(0, '#FFF8C6');
+  sg.addColorStop(0.55, '#FFAE34');
+  sg.addColorStop(1, '#FF326A');
+  ctx.fillStyle = sg;
+  ctx.fillRect(sunX - sunR, sunY - sunR, sunR * 2, sunR);
+  ctx.restore();
+
+  // Skyline silhouette along bottom edge of horizon band
+  const heights = [0.16, 0.28, 0.14, 0.34, 0.20, 0.26, 0.12, 0.22, 0.32, 0.18, 0.29, 0.15, 0.24, 0.19];
+  const cols = Math.max(18, Math.round(bw / 46));
+  const cw = bw / cols;
+  ctx.fillStyle = '#0D0617';
+  for (let i = 0; i < cols; i++) {
+    const ch = bandH * (0.10 + heights[i % heights.length] * 0.36);
+    ctx.fillRect(bx + i * cw - 0.5, stageTop + bandH - ch, cw + 1, ch + 2);
+  }
+
+  // Tall palms flanking the left and right horizon silhouettes
+  drawPalmSilhouette(ctx, bx + bw * 0.09, stageTop + bandH, bandH * 0.88, bandH * 0.14, 1);
+  drawPalmSilhouette(ctx, bx + bw * 0.15, stageTop + bandH, bandH * 0.64, -bandH * 0.10, 0.85);
+  drawPalmSilhouette(ctx, bx + bw * 0.91, stageTop + bandH, bandH * 0.88, bandH * 0.14, -1);
+  drawPalmSilhouette(ctx, bx + bw * 0.85, stageTop + bandH, bandH * 0.64, -bandH * 0.10, -0.85);
+
+  // Subtle dark depth vignette near edges + top gold divider rule
+  const sideVig = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+  sideVig.addColorStop(0, 'rgba(9, 4, 18, 0.45)');
+  sideVig.addColorStop(0.18, 'rgba(9, 4, 18, 0)');
+  sideVig.addColorStop(0.82, 'rgba(9, 4, 18, 0)');
+  sideVig.addColorStop(1, 'rgba(9, 4, 18, 0.45)');
+  ctx.fillStyle = sideVig;
+  ctx.fillRect(bx, stageTop, bw, bandH);
+
+  ctx.fillStyle = divColor;
+  ctx.fillRect(bx, stageTop, bw, divH);
+  ctx.restore();
+}
+
 export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH, gutterPx, state, grade, borderStyle) {
   if (!footerH || footerH <= 0) return;
 
@@ -90,6 +274,7 @@ export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH,
   const fy = height - outerFrame - footerH;
   const fh = footerH;
   const taglineText = (state.tagline || '').trim().toUpperCase();
+  const divColor = borderStyle.thinDivider && borderStyle.dividerColor ? borderStyle.dividerColor : borderStyle.color;
 
   ctx.save();
   ctx.beginPath();
@@ -104,13 +289,12 @@ export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH,
   ctx.fillRect(fx, fy, fw, fh);
 
   const vg = ctx.createLinearGradient(0, fy, 0, fy + fh);
-  vg.addColorStop(0, 'rgba(8, 5, 16, 0.46)');
-  vg.addColorStop(0.5, 'rgba(8, 5, 16, 0.16)');
-  vg.addColorStop(1, 'rgba(8, 5, 16, 0.74)');
+  vg.addColorStop(0, 'rgba(8, 5, 16, 0.48)');
+  vg.addColorStop(0.5, 'rgba(8, 5, 16, 0.18)');
+  vg.addColorStop(1, 'rgba(8, 5, 16, 0.78)');
   ctx.fillStyle = vg;
   ctx.fillRect(fx, fy, fw, fh);
 
-  // Retro striped sun disc behind center tagline
   const sunX = fx + fw * 0.5;
   const sunY = fy + fh * 0.98;
   const sunR = fh * 0.92;
@@ -142,7 +326,6 @@ export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH,
   ctx.fillRect(sunX - sunR, sunY - sunR, sunR * 2, sunR);
   ctx.restore();
 
-  // Coastal skyline silhouette
   const skyHeights = [0.22, 0.34, 0.18, 0.40, 0.25, 0.32, 0.16, 0.28, 0.42, 0.21, 0.35, 0.19, 0.30, 0.24];
   ctx.fillStyle = '#090510';
   const bldgCount = Math.max(14, Math.round(fw / 48));
@@ -160,14 +343,13 @@ export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH,
     }
   }
 
-  // Sweeping palm silhouettes flanking center
   drawPalmSilhouette(ctx, fx + fw * 0.17, fy + fh, fh * 0.90, -fh * 0.18, 1);
   drawPalmSilhouette(ctx, fx + fw * 0.21, fy + fh, fh * 0.66, fh * 0.14, 0.85);
   drawPalmSilhouette(ctx, fx + fw * 0.83, fy + fh, fh * 0.90, -fh * 0.18, -1);
   drawPalmSilhouette(ctx, fx + fw * 0.79, fy + fh, fh * 0.66, fh * 0.14, -0.85);
 
-  const dividerH = Math.max(4, Math.round(gutterPx * 0.42));
-  ctx.fillStyle = borderStyle.color;
+  const dividerH = Math.max(3, Math.round(fh * 0.048));
+  ctx.fillStyle = divColor;
   ctx.fillRect(fx, fy, fw, dividerH);
   ctx.fillStyle = '#080510';
   ctx.fillRect(fx, fy + dividerH, fw, Math.max(2, Math.round(fh * 0.022)));
@@ -225,8 +407,7 @@ export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH,
     drawTextTracked(ctx, taglineText, tagX, tagY, tagTracking, 'fill');
   }
 
-  // Original miniature billing-block credits (zero brand overlap)
-  const billingSize = Math.max(8, Math.round(fh * 0.14));
+  const billingSize = Math.max(8, Math.round(fh * 0.145));
   const billingTracking = Math.round(billingSize * 0.09);
   ctx.font = `600 ${billingSize}px "Barlow", sans-serif`;
   const maxBillW = showSideItems ? (bx - fx - padSide * 3) * 0.62 : fw * 0.88;
@@ -299,12 +480,12 @@ export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH,
   ctx.restore();
 }
 
-// Top-Right HEAT 5-Star Badge
+// Fallback floating HEAT 5-Star badge (only rendered when Top Press Header Bar is off)
 export function renderHeatStars(ctx, width, outerFrame, count, grade, titlePosition, mosaicBottom) {
   if (!count || count <= 0) return;
   const base = Math.min(width, 1080);
-  const starR = Math.max(10, Math.round(base * 0.0145));
-  const gap = starR * 2.45;
+  const starR = Math.max(10, Math.round(base * 0.014));
+  const gap = starR * 2.4;
   const labelFontSize = Math.round(starR * 1.24);
   ctx.save();
   ctx.font = `700 ${labelFontSize}px "Bebas Neue", sans-serif`;
@@ -329,8 +510,8 @@ export function renderHeatStars(ctx, width, outerFrame, count, grade, titlePosit
   ctx.closePath();
   ctx.fillStyle = 'rgba(10, 7, 20, 0.92)';
   ctx.fill();
-  ctx.lineWidth = Math.max(2, base * 0.0024);
-  ctx.strokeStyle = 'rgba(246, 241, 231, 0.85)';
+  ctx.lineWidth = Math.max(2, base * 0.0022);
+  ctx.strokeStyle = 'rgba(245, 230, 200, 0.88)';
   ctx.stroke();
 
   ctx.fillStyle = '#FFFFFF';
@@ -355,17 +536,14 @@ export function renderHeatStars(ctx, width, outerFrame, count, grade, titlePosit
     ctx.closePath();
     if (filled) {
       ctx.fillStyle = grade.accentColor;
-      ctx.shadowColor = grade.accentColor;
-      ctx.shadowBlur = 10;
       ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.lineWidth = 1.6;
+      ctx.lineWidth = 1.4;
       ctx.strokeStyle = '#09060E';
       ctx.stroke();
     } else {
       ctx.fillStyle = 'rgba(255,255,255,0.12)';
       ctx.fill();
-      ctx.lineWidth = 1.4;
+      ctx.lineWidth = 1.2;
       ctx.strokeStyle = 'rgba(255,255,255,0.45)';
       ctx.stroke();
     }
@@ -373,16 +551,15 @@ export function renderHeatStars(ctx, width, outerFrame, count, grade, titlePosit
   ctx.restore();
 }
 
-// Single clean corner badge (renders optional editionPill only when explicitly provided)
 export function renderCornerBadges(ctx, width, outerFrame, badgeText, editionPill, grade, titlePosition, mosaicBottom) {
   const clean = (badgeText || '').trim().toUpperCase();
   const edClean = (editionPill || '').trim().toUpperCase();
   if (!clean && !edClean) return;
 
   const base = Math.min(width, 1080);
-  const fontSize = Math.round(base * 0.026);
+  const fontSize = Math.round(base * 0.024);
   const padX = Math.round(fontSize * 0.65);
-  const padY = Math.round(fontSize * 0.30);
+  const padY = Math.round(fontSize * 0.28);
   const isTopBanner = titlePosition === 'top-banner';
   const startX = outerFrame + Math.round(base * 0.018);
   const by = isTopBanner ? mosaicBottom - Math.round(base * 0.018) - (fontSize + padY * 2) : outerFrame + Math.round(base * 0.018);
@@ -413,7 +590,7 @@ export function renderCornerBadges(ctx, width, outerFrame, badgeText, editionPil
     ctx.closePath();
     ctx.fillStyle = grade.badgeBg;
     ctx.fill();
-    ctx.lineWidth = Math.max(2.5, base * 0.0028);
+    ctx.lineWidth = Math.max(2.2, base * 0.0024);
     ctx.strokeStyle = '#09060E';
     ctx.stroke();
 
@@ -441,7 +618,7 @@ export function renderCornerBadges(ctx, width, outerFrame, badgeText, editionPil
     ctx.closePath();
     ctx.fillStyle = 'rgba(12, 8, 22, 0.90)';
     ctx.fill();
-    ctx.lineWidth = Math.max(2, base * 0.0022);
+    ctx.lineWidth = Math.max(2, base * 0.0020);
     ctx.strokeStyle = grade.badgeBg;
     ctx.stroke();
 
@@ -453,7 +630,7 @@ export function renderCornerBadges(ctx, width, outerFrame, badgeText, editionPil
   ctx.restore();
 }
 
-// LARGE High-Contrast Gold & Black-Ringed "ORIGINAL COVER ART" Sunburst Seal (legible at 768x480)
+// Large High-Contrast Gold & Black-Ringed "ORIGINAL COVER ART" Sunburst Seal
 export function renderLargeGoldSunburstSeal(ctx, cx, cy, outerR, starburstText) {
   const innerR = outerR * 0.78;
   const points = 20;
@@ -486,9 +663,9 @@ export function renderLargeGoldSunburstSeal(ctx, cx, cy, outerR, starburstText) 
 
   traceBurst(0, 0, 1);
   const goldGrad = ctx.createRadialGradient(-outerR * 0.25, -outerR * 0.25, outerR * 0.1, 0, 0, outerR);
-  goldGrad.addColorStop(0, '#FFF6AA');
+  goldGrad.addColorStop(0, '#FFF8BA');
   goldGrad.addColorStop(0.55, '#FFD038');
-  goldGrad.addColorStop(1, '#F29A16');
+  goldGrad.addColorStop(1, '#F29412');
   ctx.fillStyle = goldGrad;
   ctx.fill();
   ctx.lineWidth = Math.max(3, outerR * 0.065);
@@ -516,63 +693,115 @@ export function renderLargeGoldSunburstSeal(ctx, cx, cy, outerR, starburstText) 
   ctx.restore();
 }
 
-// High-legibility 5-Star Press Review Bar
-function renderPressQuotePill(ctx, cx, cy, maxW, quoteText, grade, base) {
-  const clean = (quoteText || '').trim().toUpperCase();
+// 4-Point Lens-Gleam Sparkle Star at peak glyph corners
+function drawLensGleamStar(ctx, cx, cy, rayLen, tintColor) {
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, rayLen * 0.65);
+  halo.addColorStop(0, 'rgba(255, 255, 255, 0.92)');
+  halo.addColorStop(0.35, tintColor);
+  halo.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(0, 0, rayLen * 0.65, 0, Math.PI * 2);
+  ctx.fill();
+
+  const traceDiamond = (len, waist) => {
+    ctx.beginPath();
+    ctx.moveTo(0, -len);
+    ctx.lineTo(waist, -waist);
+    ctx.lineTo(len, 0);
+    ctx.lineTo(waist, waist);
+    ctx.lineTo(0, len);
+    ctx.lineTo(-waist, waist);
+    ctx.lineTo(-len, 0);
+    ctx.lineTo(-waist, -waist);
+    ctx.closePath();
+  };
+
+  traceDiamond(rayLen, rayLen * 0.13);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.shadowColor = tintColor;
+  ctx.shadowBlur = 12;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.rotate(Math.PI / 4);
+  traceDiamond(rayLen * 0.38, rayLen * 0.08);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(0, 0, rayLen * 0.14, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+  ctx.restore();
+}
+
+// High-Contrast Tagline Pill ("FIVE STRANGERS · ONE COAST · NO WAY BACK")
+function renderSubTaglinePill(ctx, cx, cy, maxW, subText, grade, base) {
+  const clean = (subText || '').trim().toUpperCase();
   if (!clean) return;
-  let fs = Math.max(13, Math.round(base * 0.025));
+
+  let fs = Math.max(13, Math.round(base * 0.021));
+  let tracking = Math.round(fs * 0.13);
   ctx.save();
   ctx.font = `700 ${fs}px "Bebas Neue", sans-serif`;
-  let tracking = Math.round(fs * 0.08);
   let tw = measureTextTracked(ctx, clean, tracking);
   while (tw + fs * 1.6 > maxW && fs > 11) {
     fs -= 1;
-    tracking = Math.round(fs * 0.06);
+    tracking = Math.round(fs * 0.10);
     ctx.font = `700 ${fs}px "Bebas Neue", sans-serif`;
     tw = measureTextTracked(ctx, clean, tracking);
   }
-  const padX = Math.round(fs * 0.86);
+  const padX = Math.round(fs * 0.85);
   const pillW = tw + padX * 2;
-  const pillH = Math.round(fs * 1.72);
+  const pillH = Math.round(fs * 1.56);
   const px = cx - pillW * 0.5;
   const py = cy - pillH * 0.5;
 
-  ctx.fillStyle = '#06030C';
+  ctx.fillStyle = 'rgba(5, 2, 12, 0.88)';
   ctx.beginPath();
-  ctx.roundRect(px + 3, py + 4, pillW, pillH, 999);
+  ctx.roundRect(px + 2.5, py + 3, pillW, pillH, 999);
   ctx.fill();
 
-  ctx.fillStyle = 'rgba(13, 8, 24, 0.96)';
+  ctx.fillStyle = 'rgba(13, 8, 24, 0.94)';
   ctx.beginPath();
   ctx.roundRect(px, py, pillW, pillH, 999);
   ctx.fill();
-  ctx.lineWidth = Math.max(2.2, base * 0.0026);
-  ctx.strokeStyle = '#FFD447';
+  ctx.lineWidth = Math.max(1.8, base * 0.0018);
+  ctx.strokeStyle = '#F5E6C8';
   ctx.stroke();
 
-  const starMatch = clean.match(/^([★☆]+\s*)(.*)$/);
   ctx.textBaseline = 'middle';
-  if (starMatch) {
-    const stars = starMatch[1];
-    const rest = starMatch[2];
-    const starsW = measureTextTracked(ctx, stars, tracking);
-    const totalMeasured = starsW + measureTextTracked(ctx, rest, tracking);
-    let tx = cx - totalMeasured * 0.5;
+  const parts = clean.split('·');
+  const dotSep = ' · ';
+  if (parts.length > 1) {
+    const trimmed = parts.map((p) => p.trim());
+    const dotW = measureTextTracked(ctx, dotSep, tracking);
+    const totalW = trimmed.reduce((s, p) => s + measureTextTracked(ctx, p, tracking), 0) + dotW * (trimmed.length - 1);
+    let tx = cx - totalW * 0.5;
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#FFD447';
-    drawTextTracked(ctx, stars, tx, cy + 1, tracking, 'fill');
-    tx += starsW;
-    ctx.fillStyle = '#FAF6EE';
-    drawTextTracked(ctx, rest, tx, cy + 1, tracking, 'fill');
+    for (let i = 0; i < trimmed.length; i++) {
+      ctx.fillStyle = '#FAF6EE';
+      drawTextTracked(ctx, trimmed[i], tx, cy + 1, tracking, 'fill');
+      tx += measureTextTracked(ctx, trimmed[i], tracking);
+      if (i < trimmed.length - 1) {
+        ctx.fillStyle = grade.accentColor;
+        drawTextTracked(ctx, dotSep, tx, cy + 1, tracking, 'fill');
+        tx += dotW;
+      }
+    }
   } else {
     ctx.textAlign = 'center';
-    ctx.fillStyle = grade.sunColors[0];
+    ctx.fillStyle = '#FAF6EE';
     drawTextTracked(ctx, clean, cx, cy + 1, tracking, 'fill');
   }
   ctx.restore();
 }
 
-// Render giant full-bleed 3D chunky double-bevel typography + neon script + press quote + gold seal + footer
+// Render Top Header + Horizon Band + Striped Retro-Chrome 3D Display Typography + Stars + Neon Script + Seal + Footer
 export function renderCoverTypographyAndBadges(
   ctx,
   width,
@@ -583,12 +812,15 @@ export function renderCoverTypographyAndBadges(
   footerH = 0,
   dockedTitleH = 0,
   topReservePx = 0,
-  gutterPx = 12,
+  gutterPx = 10,
+  topHeaderH = 0,
+  horizonBandH = 0,
 ) {
   const grade = getGradeById(state.gradeId);
-  const borderStyle = getBorderStyleById(state.borderStyle || 'cream');
+  const borderStyle = getBorderStyleById(state.borderStyle || 'twilight-gold');
   const titleText = (state.title || '').trim().toUpperCase();
   const scriptText = (state.script || '').trim();
+  const subTaglineText = (state.subTagline || '').trim().toUpperCase();
   const taglineText = (state.tagline || '').trim().toUpperCase();
   const pos = state.titlePosition || 'overlay-bottom';
   const style = state.titleStyle || 'sunset-extrude';
@@ -596,12 +828,24 @@ export function renderCoverTypographyAndBadges(
   const aspect = width / height;
 
   const mosaicTop = outerFrame + topReservePx;
-  const mosaicBottom = height - outerFrame - footerH - dockedTitleH;
+  const mosaicBottom = height - outerFrame - footerH - dockedTitleH - horizonBandH;
   const stageTop = mosaicBottom;
   const stageBottom = height - outerFrame - footerH;
 
-  // Optional docked bands only if user selects bottom-stage / top-stage placement
-  if (dockedTitleH > 0) {
+  // 1) Top Press Header Bar (replaces mid-canvas floating quote pill)
+  if (topHeaderH > 0) {
+    renderTopPressHeaderBar(ctx, width, outerFrame, topHeaderH, state, grade, borderStyle);
+  } else {
+    renderCornerBadges(ctx, width, outerFrame, state.badge, state.editionPill, grade, pos, mosaicBottom);
+    if (state.showHeatStars) {
+      renderHeatStars(ctx, width, outerFrame, state.heatStars ?? 5, grade, pos, mosaicBottom);
+    }
+  }
+
+  // 2) Horizon Skyline Band or optional docked title band
+  if (horizonBandH > 0) {
+    renderHorizonSkylineBand(ctx, width, outerFrame, stageTop, horizonBandH, gutterPx, grade, borderStyle);
+  } else if (dockedTitleH > 0) {
     ctx.save();
     const bg = ctx.createLinearGradient(outerFrame, stageTop, width - outerFrame, stageBottom);
     bg.addColorStop(0, grade.titleStageGradient[0]);
@@ -609,50 +853,51 @@ export function renderCoverTypographyAndBadges(
     bg.addColorStop(1, grade.titleStageGradient[2]);
     ctx.fillStyle = bg;
     ctx.fillRect(outerFrame, stageTop, width - outerFrame * 2, dockedTitleH);
-    const seamH = Math.max(6, Math.round(gutterPx * 0.65));
-    ctx.fillStyle = borderStyle.color;
-    ctx.fillRect(outerFrame, stageTop - seamH * 0.5, width - outerFrame * 2, seamH);
+    const seamH = Math.max(4, Math.round(gutterPx * 0.45));
+    ctx.fillStyle = borderStyle.thinDivider ? borderStyle.dividerColor : borderStyle.color;
+    ctx.fillRect(outerFrame, stageTop, width - outerFrame * 2, seamH);
     ctx.restore();
-  } else if (topReservePx > 0) {
+  } else if (pos === 'top-banner' && topReservePx > topHeaderH) {
+    const topBannerH = topReservePx - topHeaderH;
+    const bannerY = outerFrame + topHeaderH;
     ctx.save();
-    const bg = ctx.createLinearGradient(outerFrame, outerFrame, width - outerFrame, outerFrame + topReservePx);
+    const bg = ctx.createLinearGradient(outerFrame, bannerY, width - outerFrame, bannerY + topBannerH);
     bg.addColorStop(0, grade.titleStageGradient[0]);
     bg.addColorStop(0.52, grade.titleStageGradient[1]);
     bg.addColorStop(1, grade.titleStageGradient[2]);
     ctx.fillStyle = bg;
-    ctx.fillRect(outerFrame, outerFrame, width - outerFrame * 2, topReservePx);
-    const seamH = Math.max(6, Math.round(gutterPx * 0.65));
-    ctx.fillStyle = borderStyle.color;
+    ctx.fillRect(outerFrame, bannerY, width - outerFrame * 2, topBannerH);
+    const seamH = Math.max(4, Math.round(gutterPx * 0.45));
+    ctx.fillStyle = borderStyle.thinDivider ? borderStyle.dividerColor : borderStyle.color;
     ctx.fillRect(outerFrame, mosaicTop - seamH * 0.5, width - outerFrame * 2, seamH);
     ctx.restore();
   }
 
-  // 1) Compact Cinematic Footer Strip
+  // 3) Compact Cinematic Footer Strip
   if (footerH > 0) {
     renderPosterFooterStrip(ctx, width, height, outerFrame, footerH, gutterPx, state, grade, borderStyle);
   }
 
-  // 2) Clean Top Badges (only what is non-empty / enabled)
-  renderCornerBadges(ctx, width, outerFrame, state.badge, state.editionPill, grade, pos, mosaicBottom);
-  if (state.showHeatStars) {
-    renderHeatStars(ctx, width, outerFrame, state.heatStars ?? 5, grade, pos, mosaicBottom);
-  }
-
-  // 3) Giant 3D Display Typography + Neon Script + Press Quote + Large Gold Sunburst Seal
-  const sealR = Math.round(base * (aspect > 1.25 ? 0.072 : 0.068));
-  let sealX = width - outerFrame - sealR - Math.round(width * 0.024);
-  let sealY = mosaicBottom - Math.round(base * 0.28);
+  // 4) Giant Striped Retro-Chrome 3D Display Typography + Lens Stars + Neon Script + Tagline Pill + Gold Seal
+  const sealR = Math.round(base * (aspect > 1.25 ? 0.068 : 0.063));
+  let sealX = width - outerFrame - sealR - Math.round(width * 0.022);
+  let sealY = mosaicBottom - Math.round(base * 0.25);
 
   if (titleText || scriptText) {
     const isFullBleedOverlay = pos === 'overlay-bottom' || pos === 'bottom-left';
+    const isHorizonOrDocked = horizonBandH > 0 || dockedTitleH > 0;
+    const hasSubPill = Boolean(subTaglineText);
+
     const maxTextW = isFullBleedOverlay
-      ? (width - outerFrame * 2) * (aspect > 1.25 ? 0.84 : 0.88)
-      : Math.max(width * 0.50, (width - outerFrame * 2) - (state.showStarburst ? sealR * 2.3 : 0));
+      ? (width - outerFrame * 2) * (aspect > 1.25 ? 0.85 : 0.89)
+      : (width - outerFrame * 2) * 0.86;
 
     let titleSize = Math.round(
-      dockedTitleH > 0
-        ? dockedTitleH * (aspect > 1.25 ? 0.78 : 0.66)
-        : base * (aspect > 1.25 ? 0.255 : aspect < 0.9 ? 0.215 : 0.235),
+      horizonBandH > 0
+        ? Math.min(horizonBandH * 0.72, base * 0.205)
+        : dockedTitleH > 0
+          ? dockedTitleH * (aspect > 1.25 ? 0.74 : 0.64)
+          : base * (aspect > 1.25 ? 0.218 : aspect < 0.9 ? 0.195 : 0.205),
     );
 
     ctx.save();
@@ -666,18 +911,23 @@ export function renderCoverTypographyAndBadges(
       }
     }
     const finalTracking = Math.round(titleSize * 0.024);
-    const scriptSize = Math.round(titleSize * 0.36);
+    const titleW = titleText ? measureTextTracked(ctx, titleText, finalTracking) : 0;
+    const scriptSize = Math.round(titleSize * (horizonBandH > 0 ? 0.34 : 0.35));
 
     let anchorX = width * 0.5;
     let textAlign = 'center';
-    let titleY = mosaicBottom - Math.round(base * (aspect > 1.25 ? 0.068 : 0.064));
+    const subReserve = hasSubPill ? Math.round(base * 0.056) : Math.round(base * 0.020);
+    let titleY = mosaicBottom - subReserve - Math.round(titleSize * 0.16);
 
-    if (pos === 'docked-bottom') {
-      anchorX = state.showStarburst ? outerFrame + (sealX - sealR - outerFrame) * 0.52 : width * 0.5;
-      titleY = stageTop + Math.round(dockedTitleH * (aspect > 1.25 ? 0.72 : 0.68));
+    if (horizonBandH > 0) {
+      anchorX = width * 0.5;
+      titleY = stageTop + Math.round(horizonBandH * 0.64);
+    } else if (dockedTitleH > 0) {
+      anchorX = width * 0.5;
+      titleY = stageTop + Math.round(dockedTitleH * 0.68);
     } else if (pos === 'top-banner') {
-      anchorX = state.showStarburst ? outerFrame + (sealX - sealR - outerFrame) * 0.52 : width * 0.5;
-      titleY = outerFrame + Math.round(topReservePx * 0.68);
+      anchorX = width * 0.5;
+      titleY = outerFrame + topHeaderH + Math.round((topReservePx - topHeaderH) * 0.72);
     } else if (pos === 'center-emblem') {
       anchorX = width * 0.5;
       titleY = mosaicTop + (mosaicBottom - mosaicTop) * 0.54;
@@ -686,12 +936,12 @@ export function renderCoverTypographyAndBadges(
       textAlign = 'left';
     }
 
-    // Smooth atmospheric dark scrim behind lower 30% of full-bleed overlay so giant 3D title explodes off the photos
+    // Subtle localized lower scrim behind giant overlay typography (keeps upper 65%+ crisp and bright)
     if (isFullBleedOverlay) {
-      const scrimH = Math.round(titleSize * 1.48 + base * 0.055);
+      const scrimH = Math.round(titleSize * 1.44 + base * 0.075);
       const sg = ctx.createLinearGradient(0, mosaicBottom - scrimH, 0, mosaicBottom);
       sg.addColorStop(0, 'rgba(9, 5, 18, 0)');
-      sg.addColorStop(0.45, 'rgba(9, 5, 18, 0.44)');
+      sg.addColorStop(0.45, 'rgba(9, 5, 18, 0.42)');
       sg.addColorStop(1, 'rgba(9, 5, 18, 0.84)');
       ctx.fillStyle = sg;
       ctx.fillRect(outerFrame, mosaicBottom - scrimH, width - outerFrame * 2, scrimH);
@@ -703,34 +953,20 @@ export function renderCoverTypographyAndBadges(
       ctx.fillRect(outerFrame, mosaicTop, width - outerFrame * 2, mosaicBottom - mosaicTop);
     }
 
-    // Place large Gold Sunburst Seal cleanly ABOVE top-right corner of title without overlapping any letterform!
-    if (pos === 'docked-bottom') {
-      sealY = stageTop + Math.round(dockedTitleH * 0.10);
+    // Position large Gold Sunburst Seal cleanly above tilted right edge without overlapping any glyph
+    const rightTiltLift = titleW * (textAlign === 'center' ? 0.024 : 0.044);
+    const sealClearTop = titleY - titleSize * 0.84 - rightTiltLift - sealR * 0.88;
+    if (horizonBandH > 0) {
+      sealY = Math.min(stageTop - Math.round(sealR * 0.45), sealClearTop);
+    } else if (dockedTitleH > 0) {
+      sealY = stageTop + Math.round(dockedTitleH * 0.14);
     } else if (pos === 'top-banner') {
       sealY = mosaicTop - Math.round(sealR * 0.08);
     } else {
-      sealX = width - outerFrame - sealR - Math.round(width * 0.022);
-      const quoteBarTopOffset = state.showPressQuote && state.pressQuote ? Math.round(base * 0.018) : 0;
-      sealY = Math.max(
-        mosaicTop + sealR * 1.60,
-        titleY - titleSize * 1.02 - sealR * 0.92 - quoteBarTopOffset * 0.4,
-      );
+      sealY = Math.max(mosaicTop + sealR * 1.15, sealClearTop);
     }
 
-    // Press Quote Pill cleanly positioned above the giant 3D title & clear of the gold seal
-    if (state.showPressQuote && state.pressQuote) {
-      const quoteCy = pos === 'docked-bottom'
-        ? stageTop - Math.round(base * 0.020)
-        : pos === 'top-banner'
-          ? mosaicTop + Math.round(base * 0.020)
-          : Math.max(mosaicTop + base * 0.055, titleY - titleSize * 1.02 - Math.round(base * 0.026));
-      const rightLimit = state.showStarburst ? sealX - sealR - Math.round(width * 0.026) : width - outerFrame - Math.round(width * 0.03);
-      const quoteMaxW = Math.max(width * 0.36, rightLimit - outerFrame - Math.round(width * 0.04));
-      const quoteCx = state.showStarburst ? Math.min(width * 0.5, outerFrame + (rightLimit - outerFrame) * 0.54) : width * 0.5;
-      renderPressQuotePill(ctx, quoteCx, quoteCy, quoteMaxW, state.pressQuote, grade, base);
-    }
-
-    // Giant 3D Chunky Double-Bevel Title (-2.5° tilt)
+    // Layered Striped Retro-Chrome 3D Display Title (-2.5 deg tilt)
     const tiltRad = (-2.5 * Math.PI) / 180;
     const pivotX = anchorX;
     const pivotY = titleY - titleSize * 0.36;
@@ -747,14 +983,14 @@ export function renderCoverTypographyAndBadges(
       ctx.lineJoin = 'round';
       ctx.miterLimit = 2;
 
-      const strokeW = Math.max(12, Math.round(titleSize * 0.135));
-      const extrudeSteps = style === 'clean-ink' ? 5 : 14;
-      const extrudeX = titleSize * 0.0115;
-      const extrudeY = titleSize * 0.014;
+      const strokeW = Math.max(11, Math.round(titleSize * 0.132));
+      const extrudeSteps = style === 'clean-ink' ? 5 : 15;
+      const extrudeX = titleSize * 0.0112;
+      const extrudeY = titleSize * 0.0138;
 
-      // 1) Deep solid 3D purple-black extrusion
+      // A) Deep 3D violet-black extrusion
       for (let s = extrudeSteps; s >= 1; s--) {
-        const shade = s > 8 ? '#240A42' : '#07030F';
+        const shade = s > 9 ? '#2B0B4A' : '#07030F';
         ctx.fillStyle = shade;
         ctx.strokeStyle = shade;
         ctx.lineWidth = strokeW;
@@ -764,23 +1000,23 @@ export function renderCoverTypographyAndBadges(
 
       if (style === 'neon-chrome') {
         ctx.strokeStyle = '#00E5FF';
-        ctx.lineWidth = strokeW * 1.18;
+        ctx.lineWidth = strokeW * 1.16;
         ctx.shadowColor = '#00E5FF';
-        ctx.shadowBlur = 24;
+        ctx.shadowBlur = 22;
         drawTextTracked(ctx, titleText, anchorX, titleY, finalTracking, 'stroke');
         ctx.shadowBlur = 0;
       }
 
-      // 2) Crisp cream outer comic rim + heavy matte black outline
-      ctx.strokeStyle = 'rgba(246, 241, 231, 0.72)';
-      ctx.lineWidth = strokeW * 1.07;
+      // B) Warm champagne-gold outer rim + heavy matte black comic keyline
+      ctx.strokeStyle = 'rgba(245, 230, 200, 0.82)';
+      ctx.lineWidth = strokeW * 1.08;
       drawTextTracked(ctx, titleText, anchorX, titleY, finalTracking, 'stroke');
 
       ctx.strokeStyle = '#08050E';
       ctx.lineWidth = strokeW;
       drawTextTracked(ctx, titleText, anchorX, titleY, finalTracking, 'stroke');
 
-      // 3) Metallic multi-stop gradient + bold chunky double-bevel gloss in isolated layer
+      // C) Offscreen metallic gradient + horizontal retro horizon stripes + specular chrome bevel
       const bandTop = Math.max(0, Math.floor(titleY - titleSize * 1.32));
       const bandBot = Math.min(height, Math.ceil(titleY + titleSize * 0.45));
       const bandH = Math.max(24, bandBot - bandTop);
@@ -794,61 +1030,105 @@ export function renderCoverTypographyAndBadges(
       lctx.textAlign = textAlign;
       lctx.textBaseline = 'alphabetic';
 
-      const fillGrad = lctx.createLinearGradient(0, localY - titleSize * 0.84, 0, localY + titleSize * 0.05);
+      const gTop = localY - titleSize * 0.84;
+      const gBot = localY + titleSize * 0.04;
+      const fillGrad = lctx.createLinearGradient(0, gTop, 0, gBot);
       if (style === 'clean-ink') {
-        fillGrad.addColorStop(0, '#FFFFFF');
-        fillGrad.addColorStop(0.55, '#F2ECFF');
-        fillGrad.addColorStop(1, '#D3CBE6');
+        fillGrad.addColorStop(0.00, '#FFFFFF');
+        fillGrad.addColorStop(0.46, '#EAE4FA');
+        fillGrad.addColorStop(0.50, '#786BA6');
+        fillGrad.addColorStop(0.54, '#FFFFFF');
+        fillGrad.addColorStop(1.00, '#C7BDDF');
       } else if (style === 'noir-gold') {
-        fillGrad.addColorStop(0, '#FFF9DE');
-        fillGrad.addColorStop(0.46, '#F6B940');
-        fillGrad.addColorStop(0.52, '#D9383A');
-        fillGrad.addColorStop(1, '#A31232');
+        fillGrad.addColorStop(0.00, '#FFFFFF');
+        fillGrad.addColorStop(0.32, '#FFF1B2');
+        fillGrad.addColorStop(0.48, '#FFD048');
+        fillGrad.addColorStop(0.505, '#2A071E');
+        fillGrad.addColorStop(0.54, '#FF5C3E');
+        fillGrad.addColorStop(0.78, '#D61D46');
+        fillGrad.addColorStop(1.00, '#8C0B2C');
       } else if (style === 'golden-heat') {
-        fillGrad.addColorStop(0, '#FFFDE8');
-        fillGrad.addColorStop(0.42, '#FFE066');
-        fillGrad.addColorStop(0.54, '#FF8C24');
-        fillGrad.addColorStop(1, '#E63B2E');
+        fillGrad.addColorStop(0.00, '#FFFFFF');
+        fillGrad.addColorStop(0.34, '#FFF7BA');
+        fillGrad.addColorStop(0.48, '#FFDA4D');
+        fillGrad.addColorStop(0.505, '#3E1216');
+        fillGrad.addColorStop(0.54, '#FF9E2B');
+        fillGrad.addColorStop(0.78, '#FF5722');
+        fillGrad.addColorStop(1.00, '#C81E38');
       } else if (style === 'neon-chrome') {
-        fillGrad.addColorStop(0, '#FFFFFF');
-        fillGrad.addColorStop(0.42, '#A8FAFF');
-        fillGrad.addColorStop(0.52, '#2FE2FF');
-        fillGrad.addColorStop(1, '#FF49C1');
+        fillGrad.addColorStop(0.00, '#FFFFFF');
+        fillGrad.addColorStop(0.34, '#D6FEFF');
+        fillGrad.addColorStop(0.48, '#5CEEFF');
+        fillGrad.addColorStop(0.505, '#12124D');
+        fillGrad.addColorStop(0.54, '#2DE2FF');
+        fillGrad.addColorStop(0.76, '#FF47C4');
+        fillGrad.addColorStop(1.00, '#B01AE8');
       } else {
-        fillGrad.addColorStop(0, '#FFFCE6');
-        fillGrad.addColorStop(0.43, '#FFC438');
-        fillGrad.addColorStop(0.53, '#FF6B3D');
-        fillGrad.addColorStop(1, '#FF267E');
+        fillGrad.addColorStop(0.00, '#FFFFFF');
+        fillGrad.addColorStop(0.32, '#FFF5B8');
+        fillGrad.addColorStop(0.48, '#FFC938');
+        fillGrad.addColorStop(0.505, '#360B3E');
+        fillGrad.addColorStop(0.54, '#FF7D34');
+        fillGrad.addColorStop(0.78, '#FF2E78');
+        fillGrad.addColorStop(1.00, '#B8146C');
       }
 
       lctx.fillStyle = fillGrad;
       drawTextTracked(lctx, titleText, anchorX, localY, finalTracking, 'fill');
 
-      // Double-bevel specular sheen across upper 42% of glyphs
       lctx.globalCompositeOperation = 'source-atop';
+
+      // Horizontal retro horizon bevel ridge + 3 lower horizon stripes
+      const ridgeY = localY - titleSize * 0.42;
+      lctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+      lctx.fillRect(0, ridgeY - 1.5, width, Math.max(2, titleSize * 0.016));
+
+      const stripes = [
+        [0.32, 0.022],
+        [0.21, 0.026],
+        [0.10, 0.030],
+      ];
+      for (const [yFrac, hFrac] of stripes) {
+        const syLine = localY - titleSize * yFrac;
+        const shLine = Math.max(2, titleSize * hFrac);
+        lctx.fillStyle = 'rgba(18, 4, 34, 0.34)';
+        lctx.fillRect(0, syLine, width, shLine);
+        lctx.fillStyle = 'rgba(255, 248, 224, 0.40)';
+        lctx.fillRect(0, syLine + shLine, width, Math.max(1.2, titleSize * 0.010));
+      }
+
+      // Upper chrome specular sheen
       const sheenGrad = lctx.createLinearGradient(0, localY - titleSize * 0.88, 0, localY - titleSize * 0.44);
-      sheenGrad.addColorStop(0, 'rgba(255, 255, 255, 0.62)');
+      sheenGrad.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
       sheenGrad.addColorStop(0.85, 'rgba(255, 255, 255, 0.14)');
       sheenGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
       lctx.fillStyle = sheenGrad;
       lctx.fillRect(0, 0, width, bandH);
 
       lctx.lineWidth = Math.max(2.5, titleSize * 0.018);
-      lctx.strokeStyle = 'rgba(255, 255, 255, 0.52)';
+      lctx.strokeStyle = 'rgba(255, 253, 236, 0.72)';
       drawTextTracked(lctx, titleText, anchorX - 1.5, localY + 2, finalTracking, 'stroke');
 
       ctx.drawImage(layer, 0, bandTop);
+
+      // D) 2 Elegant 4-Point Lens-Gleam Sparkle Stars on peak glyph corners
+      const leftBound = textAlign === 'center' ? anchorX - titleW * 0.5 : anchorX;
+      const rightBound = leftBound + titleW;
+      const starTint = style === 'neon-chrome' ? 'rgba(92, 238, 255, 0.88)' : 'rgba(255, 226, 128, 0.88)';
+      drawLensGleamStar(ctx, leftBound + titleSize * 0.055, titleY - titleSize * 0.74, Math.round(titleSize * 0.175), starTint);
+      drawLensGleamStar(ctx, rightBound - titleSize * 0.075, titleY - titleSize * 0.68, Math.round(titleSize * 0.135), starTint);
+
       ctx.restore();
     }
 
-    // Glowing Neon Brush Script directly under right half of giant 3D title
+    // 5) Glowing Neon Brush Script directly under right half of giant 3D title
     if (scriptText) {
       ctx.save();
-      const titleW = titleText ? measureTextTracked(ctx, titleText, finalTracking) : 0;
       let sx = textAlign === 'center' ? anchorX + titleW * 0.24 : anchorX + titleW * 0.48;
       sx = Math.min(sx, width - outerFrame - Math.round(width * 0.16));
-      const rawSy = titleY + Math.round(titleSize * 0.10);
-      const maxSy = (dockedTitleH > 0 ? stageBottom : mosaicBottom) - Math.round(scriptSize * 0.58);
+      const rawSy = titleY + Math.round(titleSize * 0.06);
+      const zoneBottom = isHorizonOrDocked ? stageBottom : mosaicBottom;
+      const maxSy = zoneBottom - Math.round(scriptSize * 0.68);
       const sy = Math.min(rawSy, maxSy);
 
       ctx.translate(sx, sy);
@@ -880,27 +1160,39 @@ export function renderCoverTypographyAndBadges(
         ctx.restore();
       };
       drawSwoosh(Math.max(7, scriptSize * 0.14), '#0B0612', 0);
-      drawSwoosh(Math.max(3.5, scriptSize * 0.07), grade.scriptColor, 16);
-      drawSwoosh(Math.max(1.5, scriptSize * 0.026), 'rgba(255, 255, 255, 0.85)', 4);
+      drawSwoosh(Math.max(3.5, scriptSize * 0.07), grade.scriptColor, 18);
+      drawSwoosh(Math.max(1.5, scriptSize * 0.026), 'rgba(255, 255, 255, 0.88)', 4);
 
       ctx.lineWidth = Math.max(8, Math.round(scriptSize * 0.21));
       ctx.strokeStyle = '#0B0612';
       ctx.strokeText(scriptText, 0, 0);
 
       ctx.shadowColor = grade.scriptGlow;
-      ctx.shadowBlur = 22;
+      ctx.shadowBlur = 24;
       ctx.fillStyle = grade.scriptColor;
       ctx.fillText(scriptText, 0, 0);
 
       ctx.shadowBlur = 6;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.80)';
       ctx.fillText(scriptText, 0, -1);
       ctx.restore();
+    }
+
+    // Tagline Pill drawn in foreground clearly below 3D title extrude & neon script
+    if (hasSubPill) {
+      const zoneBottom = isHorizonOrDocked ? stageBottom : mosaicBottom;
+      const pillCy = zoneBottom - Math.round(base * 0.020);
+      const hasRightScript = Boolean(scriptText);
+      const pillCx = (aspect > 1.22 && hasRightScript && textAlign === 'center')
+        ? Math.max(outerFrame + width * 0.28, anchorX - titleW * 0.18)
+        : width * 0.5;
+      const pillMaxW = (aspect > 1.22 && hasRightScript) ? width * 0.48 : (width - outerFrame * 2) * 0.82;
+      renderSubTaglinePill(ctx, pillCx, pillCy, pillMaxW, subTaglineText, grade, base);
     }
     ctx.restore();
   }
 
-  // 4) Large High-Contrast Gold Sunburst Seal
+  // 6) Large High-Contrast Gold Sunburst Seal
   if (state.showStarburst) {
     renderLargeGoldSunburstSeal(ctx, sealX, sealY, sealR, state.starburstText);
   }

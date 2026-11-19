@@ -1,6 +1,6 @@
-// Vice Cover Studio v2 — Multi-Panel GTA Cover Art Maker (Offline Canvas 2D + Painterly Sobel Ink Pipeline)
-// Core features: 8 slanted multi-panel layouts, per-panel crop/pan/zoom/rotate/flip/stamps, 6 Vice City color grades,
-// Cream/White/Black borders, 3D tilted typography, press quote, gold sunburst seal, and batch PNG export (1920x1080, 1080x1350, 1080x1080).
+// Vice Cover Studio v3 — Multi-Panel Cover Art Maker (Offline Canvas 2D + Painterly Sobel Ink Pipeline)
+// Core features: 8 slanted multi-panel layouts, Twilight Gold / Cream / White / Black borders, per-panel crop/pan/zoom/rotate/flip/roles,
+// 6 harmonized color grades + halftone grain, layered striped retro-chrome 3D typography, top press bar, gold sunburst seal & 3-size PNG export.
 
 import { EXPORT_SIZES, MULTI_PANEL_LAYOUTS, getLayoutById, hitTestPanel, getSmartSinglePhotoTransform } from './layouts.js';
 import { VICE_COLOR_GRADES, PANEL_BORDER_STYLES, QUICK_PRESETS, getGradeById } from './grades.js';
@@ -22,23 +22,25 @@ export const studioState = {
   sizeId: 'landscape',
   layoutId: 'hero-slant-6',
   gradeId: 'vice-sunset',
-  borderStyle: 'cream',
+  borderStyle: 'twilight-gold',
   presetId: 'sunset-gold',
   paintStrength: 0.72,
   inkStrength: 0.58,
-  gradeStrength: 0.86,
-  halftoneStrength: 0.22,
+  gradeStrength: 0.92,
+  halftoneStrength: 0.34,
   title: 'PALM HORIZON',
   script: 'Sunset Syndicate',
-  pressQuote: '★★★★★ "A COASTAL FEVER DREAM" — COASTAL PRESS',
-  tagline: 'ORIGINAL COVER ART — SHOT ON YOUR CAMERA',
-  badge: '',
+  pressQuote: '★★★★★ "PURE GOLDEN-HOUR ADRENALINE" — COASTAL WEEKLY',
+  subTagline: 'FIVE STRANGERS · ONE COAST · NO WAY BACK',
+  tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA',
+  badge: 'VOL. 06',
   editionPill: '',
   titleStyle: 'sunset-extrude',
   titlePosition: 'overlay-bottom',
+  showRoleTags: true,
   showLocationStamps: false,
   showPressQuote: true,
-  showHeatStars: true,
+  showHeatStars: false,
   heatStars: 5,
   showFooterStrip: true,
   showStarburst: true,
@@ -52,6 +54,7 @@ export const studioState = {
     rotation: 0,
     flipH: false,
     gradeOverride: '',
+    role: '',
     stamp: '',
   })),
 };
@@ -89,7 +92,7 @@ export async function uploadUserPhotos(files, mode = 'multi') {
   if (!uploadedIds.length) return uploadedIds;
   if (mode === 'panel') {
     updatePanelCropPanZoom(studioState.selectedPanel, {
-      photoId: uploadedIds[0], zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, stamp: '',
+      photoId: uploadedIds[0], zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, role: '', stamp: '',
     });
     renderPhotoLibraryTray();
   } else if (mode === 'single' || uploadedIds.length === 1) {
@@ -117,6 +120,7 @@ export function fillAllPanelsFromPhoto(photoId) {
       rotation: smart.rotation,
       flipH: smart.flipH,
       gradeOverride: '',
+      role: '',
       stamp: '',
     };
   }
@@ -218,16 +222,18 @@ function bindStudioDom() {
     rotateVal: 'panel-rotate-val',
     swapSelect: 'swap-panel-select',
     panelGradeSelect: 'panel-grade-select',
+    panelRoleInput: 'panel-role-input',
     panelStampInput: 'panel-stamp-input',
     activePanelBadge: 'active-panel-badge',
     stagePanelChip: 'stage-panel-chip',
     captionTitle: 'caption-title-input',
     captionScript: 'caption-script-input',
     pressQuote: 'press-quote-input',
-    captionTagline: 'caption-tagline-input',
+    subTagline: 'sub-tagline-input',
     cornerBadge: 'corner-badge-input',
     titleStyle: 'title-style-select',
     titlePos: 'title-position-select',
+    toggleRoles: 'toggle-role-tags',
     toggleStamps: 'toggle-location-stamps',
     toggleSeal: 'toggle-original-seal',
     toggleQuote: 'toggle-press-quote',
@@ -297,6 +303,7 @@ function restoreSnapshot(snapJson) {
     updateCanvasDimensions(document.body.classList.contains('shot-cover-only'));
   }
   syncTypographyInputs();
+  syncPanelInspectorUI();
   syncStaticActiveStates();
   populateSwapSelect();
   renderLiveCoverCanvas();
@@ -365,7 +372,7 @@ function renderStaticControls() {
     btn.type = 'button';
     btn.className = 'border-pill' + (studioState.borderStyle === b.id ? ' active' : '');
     btn.dataset.border = b.id;
-    btn.innerHTML = `<i style="background:${b.color}"></i><span>${b.label}</span>`;
+    btn.innerHTML = `<i style="background:${b.swatchBg || b.color}"></i><span>${b.label}</span>`;
     btn.addEventListener('click', () => {
       applyColorGradeAndBorder(null, b.id);
       setStatus(`Border: ${b.label}`);
@@ -436,7 +443,7 @@ function renderPhotoLibraryTray() {
     btn.appendChild(img);
     btn.addEventListener('click', () => {
       updatePanelCropPanZoom(studioState.selectedPanel, {
-        photoId: entry.id, zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, stamp: '',
+        photoId: entry.id, zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, role: '', stamp: '',
       });
       renderPhotoLibraryTray();
       recordHistory();
@@ -463,6 +470,10 @@ function syncPanelInspectorUI() {
   dom.rotateSlider.value = String(Math.round(p.rotation || 0));
   dom.rotateVal.textContent = `${Math.round(p.rotation || 0)}°`;
   dom.panelGradeSelect.value = p.gradeOverride || '';
+  if (dom.panelRoleInput) {
+    dom.panelRoleInput.value = p.role || '';
+    dom.panelRoleInput.placeholder = photoEntry?.defaultRole || 'THE DRIVER';
+  }
   dom.panelStampInput.value = p.stamp || '';
   dom.panelStampInput.placeholder = photoEntry?.defaultStamp || 'LOCATION · TIME';
   renderPhotoLibraryTray();
@@ -472,10 +483,11 @@ function syncTypographyInputs() {
   dom.captionTitle.value = studioState.title;
   dom.captionScript.value = studioState.script;
   dom.pressQuote.value = studioState.pressQuote;
-  dom.captionTagline.value = studioState.tagline;
+  if (dom.subTagline) dom.subTagline.value = studioState.subTagline || '';
   dom.cornerBadge.value = studioState.badge;
   dom.titleStyle.value = studioState.titleStyle;
   dom.titlePos.value = studioState.titlePosition;
+  if (dom.toggleRoles) dom.toggleRoles.checked = studioState.showRoleTags !== false;
   dom.toggleStamps.checked = studioState.showLocationStamps;
   dom.toggleSeal.checked = studioState.showStarburst;
   dom.toggleQuote.checked = studioState.showPressQuote;
@@ -485,11 +497,11 @@ function syncTypographyInputs() {
   dom.paintVal.textContent = `${Math.round(studioState.paintStrength * 100)}%`;
   dom.inkSlider.value = String(Math.round(studioState.inkStrength * 100));
   dom.inkVal.textContent = `${Math.round(studioState.inkStrength * 100)}%`;
-  dom.gradeSlider.value = String(Math.round((studioState.gradeStrength ?? 0.86) * 100));
-  dom.gradeVal.textContent = `${Math.round((studioState.gradeStrength ?? 0.86) * 100)}%`;
+  dom.gradeSlider.value = String(Math.round((studioState.gradeStrength ?? 0.92) * 100));
+  dom.gradeVal.textContent = `${Math.round((studioState.gradeStrength ?? 0.92) * 100)}%`;
 }
 
-function distributePhotosAcrossPanels(photoIds) {
+function distributePhotosAcrossPanels(photoIds, roles = []) {
   if (!photoIds.length) return;
   for (let i = 0; i < studioState.panels.length; i++) {
     const pid = photoIds[i % photoIds.length];
@@ -502,6 +514,7 @@ function distributePhotosAcrossPanels(photoIds) {
       rotation: 0,
       flipH: isRepeat,
       gradeOverride: '',
+      role: roles[i] || '',
       stamp: isRepeat ? 'MIDNIGHT GARAGE · 10:15 PM' : '',
     };
   }
@@ -515,17 +528,18 @@ function applyQuickPreset(presetId) {
   studioState.presetId = preset.id;
   studioState.gradeId = preset.gradeId;
   studioState.layoutId = preset.layoutId;
-  studioState.borderStyle = preset.borderStyle || 'cream';
+  studioState.borderStyle = preset.borderStyle || 'twilight-gold';
   studioState.paintStrength = preset.paintStrength;
   studioState.inkStrength = preset.inkStrength;
-  studioState.gradeStrength = preset.gradeStrength ?? 0.86;
-  studioState.halftoneStrength = preset.halftoneStrength ?? 0.24;
+  studioState.gradeStrength = preset.gradeStrength ?? 0.92;
+  studioState.halftoneStrength = preset.halftoneStrength ?? 0.34;
   studioState.title = preset.title;
   studioState.script = preset.script;
   studioState.pressQuote = preset.pressQuote || '';
+  studioState.subTagline = preset.subTagline || '';
   studioState.tagline = preset.tagline;
   studioState.badge = preset.badge;
-  studioState.editionPill = preset.editionPill || "COLLECTOR'S EDITION";
+  studioState.editionPill = preset.editionPill || '';
   studioState.titleStyle = preset.titleStyle;
   studioState.titlePosition = preset.titlePosition;
   studioState.showHeatStars = preset.showHeatStars;
@@ -533,13 +547,15 @@ function applyQuickPreset(presetId) {
   studioState.showFooterStrip = preset.showFooterStrip ?? true;
   studioState.showStarburst = preset.showStarburst ?? true;
   studioState.showPressQuote = preset.showPressQuote ?? true;
-  studioState.showLocationStamps = preset.showLocationStamps ?? true;
+  studioState.showRoleTags = preset.showRoleTags ?? true;
+  studioState.showLocationStamps = preset.showLocationStamps ?? false;
   studioState.starburstText = preset.starburstText || 'ORIGINAL COVER ART';
 
   const layout = getLayoutById(studioState.layoutId);
   if (studioState.selectedPanel >= layout.panelCount) studioState.selectedPanel = 0;
 
   syncTypographyInputs();
+  syncPanelInspectorUI();
   syncStaticActiveStates();
   populateSwapSelect();
   renderLiveCoverCanvas();
@@ -547,11 +563,11 @@ function applyQuickPreset(presetId) {
 }
 
 const SURPRISE_TITLES = [
-  { title: 'PALM HORIZON', script: 'Sunset Syndicate', tagline: '100% ORIGINAL COVER ART — SHOT ON YOUR CAMERA', badge: '' },
-  { title: 'NEON OVERDRIVE', script: 'After Midnight', tagline: '100% ORIGINAL COVER ART — SHOT ON YOUR CAMERA', badge: '' },
-  { title: 'COASTAL HEAT', script: 'Sun & Chrome', tagline: '100% ORIGINAL COVER ART — SHOT ON YOUR CAMERA', badge: 'VOL. 06' },
-  { title: 'OCEAN HIGHWAY', script: 'Golden Strip', tagline: 'FAST CARS & LATE NIGHTS', badge: 'DELUXE' },
-  { title: 'SOLAR BAYOUT', script: 'Sunset Shores', tagline: 'RULE THE WATERFRONT', badge: 'LIMITED' },
+  { title: 'PALM HORIZON', script: 'Sunset Syndicate', subTagline: 'FIVE STRANGERS · ONE COAST · NO WAY BACK', tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA', badge: 'VOL. 06' },
+  { title: 'NEON OVERDRIVE', script: 'Midnight Run', subTagline: 'NO SLEEP · ALL SPEED · AFTER MIDNIGHT', tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA', badge: 'VOL. 06' },
+  { title: 'COASTAL HEAT', script: 'The Syndicate', subTagline: 'SIX PLAYERS · ONE SUMMER · HIGH STAKES', tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA', badge: 'VOL. 06' },
+  { title: 'AFTER DARK', script: 'City of Lights', subTagline: 'FIVE NIGHTS · ONE CITY · ZERO MERCY', tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA', badge: 'NOIR CUT' },
+  { title: 'SOLAR BAYOUT', script: 'Sunset Shores', subTagline: 'RULE THE WATERFRONT · COAST TO COAST', tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA', badge: 'LIMITED' },
 ];
 
 function randomizeCoverDesign() {
@@ -564,18 +580,20 @@ function randomizeCoverDesign() {
   studioState.presetId = '';
   studioState.layoutId = layout.id;
   studioState.gradeId = grade.id;
-  studioState.borderStyle = pick(['cream', 'white']);
+  studioState.borderStyle = pick(['twilight-gold', 'cream', 'white']);
   studioState.titleStyle = grade.id === 'midnight-neon' ? 'neon-chrome' : grade.id === 'golden-heatwave' ? 'golden-heat' : pick(styles);
-  studioState.titlePosition = 'overlay-bottom';
+  studioState.titlePosition = pick(['overlay-bottom', 'horizon-band']);
   studioState.title = copy.title;
   studioState.script = copy.script;
+  studioState.subTagline = copy.subTagline;
   studioState.tagline = copy.tagline;
   studioState.badge = copy.badge;
   studioState.editionPill = '';
   studioState.showFooterStrip = true;
   studioState.showStarburst = true;
-  studioState.showHeatStars = true;
+  studioState.showHeatStars = false;
   studioState.showPressQuote = true;
+  studioState.showRoleTags = true;
   studioState.showLocationStamps = false;
 
   const ids = [...photoMap.keys()];
@@ -587,6 +605,7 @@ function randomizeCoverDesign() {
   if (studioState.selectedPanel >= layout.panelCount) studioState.selectedPanel = 0;
 
   syncTypographyInputs();
+  syncPanelInspectorUI();
   syncStaticActiveStates();
   populateSwapSelect();
   renderLiveCoverCanvas();
@@ -747,7 +766,7 @@ function wireInteractions() {
 
   document.getElementById('reset-panel-crop-btn').addEventListener('click', () => {
     updatePanelCropPanZoom(studioState.selectedPanel, {
-      zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, gradeOverride: '', stamp: '',
+      zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, gradeOverride: '', role: '', stamp: '',
     });
     recordHistory();
   });
@@ -773,6 +792,13 @@ function wireInteractions() {
     recordHistory();
   });
 
+  if (dom.panelRoleInput) {
+    dom.panelRoleInput.addEventListener('input', () => {
+      updatePanelCropPanZoom(studioState.selectedPanel, { role: dom.panelRoleInput.value });
+      scheduleDebouncedHistory();
+    });
+  }
+
   dom.panelStampInput.addEventListener('input', () => {
     updatePanelCropPanZoom(studioState.selectedPanel, { stamp: dom.panelStampInput.value });
     scheduleDebouncedHistory();
@@ -781,10 +807,15 @@ function wireInteractions() {
   dom.captionTitle.addEventListener('input', () => { studioState.title = dom.captionTitle.value; renderLiveCoverCanvas(); scheduleDebouncedHistory(); });
   dom.captionScript.addEventListener('input', () => { studioState.script = dom.captionScript.value; renderLiveCoverCanvas(); scheduleDebouncedHistory(); });
   dom.pressQuote.addEventListener('input', () => { studioState.pressQuote = dom.pressQuote.value; renderLiveCoverCanvas(); scheduleDebouncedHistory(); });
-  dom.captionTagline.addEventListener('input', () => { studioState.tagline = dom.captionTagline.value; renderLiveCoverCanvas(); scheduleDebouncedHistory(); });
+  if (dom.subTagline) {
+    dom.subTagline.addEventListener('input', () => { studioState.subTagline = dom.subTagline.value; renderLiveCoverCanvas(); scheduleDebouncedHistory(); });
+  }
   dom.cornerBadge.addEventListener('input', () => { studioState.badge = dom.cornerBadge.value; renderLiveCoverCanvas(); scheduleDebouncedHistory(); });
   dom.titleStyle.addEventListener('change', () => { studioState.titleStyle = dom.titleStyle.value; renderLiveCoverCanvas(); recordHistory(); });
   dom.titlePos.addEventListener('change', () => { studioState.titlePosition = dom.titlePos.value; renderLiveCoverCanvas(); recordHistory(); });
+  if (dom.toggleRoles) {
+    dom.toggleRoles.addEventListener('change', () => { studioState.showRoleTags = dom.toggleRoles.checked; renderLiveCoverCanvas(); recordHistory(); });
+  }
   dom.toggleStamps.addEventListener('change', () => { studioState.showLocationStamps = dom.toggleStamps.checked; renderLiveCoverCanvas(); recordHistory(); });
   dom.toggleSeal.addEventListener('change', () => { studioState.showStarburst = dom.toggleSeal.checked; renderLiveCoverCanvas(); recordHistory(); });
   dom.toggleQuote.addEventListener('change', () => { studioState.showPressQuote = dom.toggleQuote.checked; renderLiveCoverCanvas(); recordHistory(); });
@@ -913,7 +944,7 @@ function applyQueryOverrides() {
   const grade = params.get('grade');
   if (grade && VICE_COLOR_GRADES.some((g) => g.id === grade)) {
     studioState.gradeId = grade;
-    studioState.presetId = '';
+    if (!preset) studioState.presetId = '';
   }
   const border = params.get('border');
   if (border && PANEL_BORDER_STYLES.some((b) => b.id === border)) studioState.borderStyle = border;
@@ -921,6 +952,7 @@ function applyQueryOverrides() {
   if (params.has('title')) studioState.title = params.get('title');
   if (params.has('script')) studioState.script = params.get('script');
   if (params.has('quote')) studioState.pressQuote = params.get('quote');
+  if (params.has('subTagline')) studioState.subTagline = params.get('subTagline');
   if (params.has('tagline')) studioState.tagline = params.get('tagline');
   if (params.has('badge')) studioState.badge = params.get('badge');
   if (params.has('editionPill')) studioState.editionPill = params.get('editionPill');
@@ -933,15 +965,21 @@ function applyQueryOverrides() {
   if (params.has('footer')) studioState.showFooterStrip = params.get('footer') !== '0';
   if (params.has('starburst')) studioState.showStarburst = params.get('starburst') !== '0';
   if (params.has('starburstText')) studioState.starburstText = params.get('starburstText');
+  if (params.has('showRoles')) studioState.showRoleTags = params.get('showRoles') !== '0';
   if (params.has('stamps')) studioState.showLocationStamps = params.get('stamps') !== '0';
   if (params.has('showQuote')) studioState.showPressQuote = params.get('showQuote') !== '0';
   if (params.has('heat')) studioState.showHeatStars = params.get('heat') !== '0';
 
+  const rolesList = params.has('roles') ? params.get('roles').split(',').map((s) => s.trim()) : [];
   const photosParam = params.get('photos');
   if (photosParam) {
     const list = photosParam.split(',').filter((id) => photoMap.has(id));
     if (list.length === 1) fillAllPanelsFromPhoto(list[0]);
-    else if (list.length > 1) distributePhotosAcrossPanels(list);
+    else if (list.length > 1) distributePhotosAcrossPanels(list, rolesList);
+  } else if (rolesList.length) {
+    for (let i = 0; i < studioState.panels.length && i < rolesList.length; i++) {
+      if (rolesList[i]) studioState.panels[i].role = rolesList[i];
+    }
   }
 
   const shotMode = params.get('shot');
@@ -952,6 +990,7 @@ function applyQueryOverrides() {
     updateCanvasDimensions(false);
   }
   syncTypographyInputs();
+  syncPanelInspectorUI();
   syncStaticActiveStates();
   populateSwapSelect();
 }
@@ -983,29 +1022,55 @@ async function bootStudio() {
   applyQueryOverrides();
   if (studioState.layoutId === 'hero-slant-6' && studioState.sizeId === 'landscape') {
     if (studioState.panels[3]?.photoId === 'supercar') {
-      studioState.panels[3].panY = -0.14;
+      studioState.panels[3].panY = -0.16;
       studioState.panels[3].zoom = 1.08;
     }
     if (studioState.panels[4]?.photoId === 'neon-motel-rider') {
-      studioState.panels[4].panY = -0.12;
+      studioState.panels[4].panY = -0.14;
       studioState.panels[4].zoom = 1.06;
     }
     if (studioState.panels[5]?.photoId === 'coast-aerial') {
-      studioState.panels[5].panY = -0.08;
+      studioState.panels[5].panY = -0.10;
       studioState.panels[5].zoom = 1.05;
     }
-  } else if (studioState.layoutId === 'hero-slant-6' && studioState.sizeId === 'square') {
-    if (studioState.panels[3]?.photoId === 'supercar') {
-      studioState.panels[3].panY = -0.12;
-      studioState.panels[3].zoom = 1.08;
+  } else if (studioState.layoutId === 'classic-box-5' && studioState.sizeId === 'landscape') {
+    if (studioState.panels[3]?.photoId === 'neon-motel-rider') {
+      studioState.panels[3].panY = -0.16;
+      studioState.panels[3].zoom = 1.06;
     }
-    if (studioState.panels[4]?.photoId === 'coast-aerial') {
-      studioState.panels[4].panY = -0.08;
+    if (studioState.panels[4]?.photoId === 'supercar') {
+      studioState.panels[4].panY = -0.16;
       studioState.panels[4].zoom = 1.06;
     }
-    if (studioState.panels[5]?.photoId === 'neon-strip') {
+  } else if (studioState.layoutId === 'vertical-poster-6' && studioState.sizeId === 'portrait') {
+    if (studioState.panels[5]?.photoId === 'yacht-chase') {
       studioState.panels[5].panY = -0.06;
-      studioState.panels[5].zoom = 1.06;
+      studioState.panels[5].zoom = 1.02;
+    }
+  } else if (studioState.layoutId === 'hero-slant-6' && studioState.sizeId === 'square') {
+    if (studioState.panels[0]?.photoId === 'pier-candid') {
+      studioState.panels[0].panY = -0.02;
+      studioState.panels[0].zoom = 1.04;
+    }
+    if (studioState.panels[1]?.photoId === 'protagonist-dusk') {
+      studioState.panels[1].panY = -0.24;
+      studioState.panels[1].zoom = 1.02;
+    }
+    if (studioState.panels[2]?.photoId === 'boulevard') {
+      studioState.panels[2].panY = -0.08;
+      studioState.panels[2].zoom = 1.04;
+    }
+    if (studioState.panels[3]?.photoId === 'supercar') {
+      studioState.panels[3].panY = -0.06;
+      studioState.panels[3].zoom = 1.06;
+    }
+    if (studioState.panels[4]?.photoId === 'coast-aerial') {
+      studioState.panels[4].panY = -0.04;
+      studioState.panels[4].zoom = 1.04;
+    }
+    if (studioState.panels[5]?.photoId === 'neon-strip') {
+      studioState.panels[5].panY = -0.04;
+      studioState.panels[5].zoom = 1.04;
     }
   }
   recordHistory(true);
