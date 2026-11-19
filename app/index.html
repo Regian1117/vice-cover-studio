@@ -7,249 +7,283 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <div id="studio-shell" class="studio-shell">
-    <header class="topbar">
+  <div id="vice-cover-studio-app" class="studio-shell">
+    <header id="studio-topbar" class="topbar">
       <div class="brand">
-        <svg class="brand-mark" width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="2"/>
-          <path d="M11.5 2L9.5 22M10.7 11.5L22 10" stroke="currentColor" stroke-width="2"/>
-          <rect x="3" y="3" width="7.2" height="18" fill="#FF6242" fill-opacity="0.32"/>
+        <svg class="brand-mark" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="4" stroke="url(#vcs-brand-grad)" stroke-width="2.2"/>
+          <path d="M11.5 2L9.2 22M10.4 11.5L22 10" stroke="#F6F1E7" stroke-width="2"/>
+          <rect x="3" y="3" width="7.2" height="18" fill="url(#vcs-brand-grad)" fill-opacity="0.38"/>
+          <defs>
+            <linearGradient id="vcs-brand-grad" x1="2" y1="2" x2="22" y2="22">
+              <stop offset="0%" stop-color="#FFC845"/>
+              <stop offset="50%" stop-color="#FF4F8E"/>
+              <stop offset="100%" stop-color="#2EE8FF"/>
+            </linearGradient>
+          </defs>
         </svg>
         <span class="brand-name">Vice Cover Studio</span>
       </div>
 
-      <div class="topbar-group">
-        <div id="preset-bar" class="preset-bar" role="group" aria-label="Quick presets"></div>
-        <div class="history-group" role="group" aria-label="History and randomize">
-          <button id="btn-undo" class="btn-tool" type="button" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <div class="topbar-center">
+        <div id="post-size-selector" class="size-pill-group" role="group" aria-label="Post export sizes">
+          <button id="post-size-1920x1080" class="size-btn active" type="button" data-size="landscape">1920 × 1080</button>
+          <button id="post-size-1080x1350" class="size-btn" type="button" data-size="portrait">1080 × 1350</button>
+          <button id="post-size-1080x1080" class="size-btn" type="button" data-size="square">1080 × 1080</button>
+        </div>
+
+        <div class="history-group" role="group" aria-label="Undo, redo and randomize">
+          <button id="undo-history-btn" class="btn-tool" type="button" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M9 14L4 9l5-5"/>
               <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
             </svg>
           </button>
-          <button id="btn-redo" class="btn-tool" type="button" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <button id="redo-history-btn" class="btn-tool" type="button" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M15 14l5-5-5-5"/>
               <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>
             </svg>
           </button>
-          <button id="btn-surprise" class="btn-surprise" type="button" title="Randomize layout, Vice grade, title & photo arrangement">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <button id="surprise-cover-btn" class="btn-surprise" type="button" title="Randomize layout, grade, title & photos">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="16 3 21 3 21 8"/>
               <line x1="4" y1="20" x2="21" y2="3"/>
               <polyline points="21 16 21 21 16 21"/>
               <line x1="15" y1="15" x2="21" y2="21"/>
               <line x1="4" y1="4" x2="9" y2="9"/>
             </svg>
-            <span>Surprise Me</span>
+            <span>Surprise</span>
           </button>
         </div>
       </div>
 
       <div class="topbar-actions">
-        <div id="size-switcher" class="segmented" role="group" aria-label="Canvas aspect ratio"></div>
-        <button id="export-primary" class="btn-primary" type="button">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <button id="export-png-btn" class="btn-export-cta" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          <span id="export-primary-label">Export 1920 × 1080</span>
+          <span id="export-png-label">Export PNG</span>
         </button>
-        <button id="export-all-3" class="btn-secondary-cta" type="button" title="Export 1920×1080, 1080×1350, and 1080×1080 PNGs in one click">
-          <span>Export All 3</span>
+        <button id="export-all-3-sizes-btn" class="btn-export-all-cta" type="button" title="Batch export 1920×1080, 1080×1350, and 1080×1080 PNGs">
+          <span>Export All 3 Sizes</span>
         </button>
       </div>
     </header>
 
     <div class="workspace">
-      <!-- Left Rail: Photos, Multi-Panel Layouts, Color Grade & Art Pipeline -->
-      <aside class="rail rail-left" aria-label="Photos, layout and style">
+      <!-- Left Rail: User Photos, 8-Sample Library, Fill All Panels & Panel Crop/Zoom/Position -->
+      <aside class="rail rail-left" aria-label="Photos and panel framing">
         <section class="panel-section">
           <div class="section-head">
             <h2>Photos</h2>
-            <span id="photo-count" class="meta-pill">5 ready</span>
+            <span id="photo-count-badge" class="meta-pill">8 ready</span>
           </div>
           <div class="upload-row">
-            <label class="btn-upload" for="upload-single" title="Upload one photo and auto-fill every panel with smart varied crops">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
-              <span>1 Photo → All</span>
-              <input id="upload-single" type="file" accept="image/*" hidden>
-            </label>
-            <label class="btn-upload" for="upload-multi" title="Upload multiple photos to populate all panels">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <label class="btn-add-photos" for="add-user-photos-input" title="Upload photos from your computer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
-              <span>Multi Upload</span>
-              <input id="upload-multi" type="file" accept="image/*" multiple hidden>
+              <span>Add Photos</span>
+              <input id="add-user-photos-input" type="file" accept="image/*" multiple hidden>
+            </label>
+            <label class="btn-single-upload" for="single-photo-all-input" title="Upload 1 photo and auto-frame across every panel">
+              <span>1 → All</span>
+              <input id="single-photo-all-input" type="file" accept="image/*" hidden>
             </label>
           </div>
-          <div id="photo-tray" class="photo-tray" aria-label="Loaded photos"></div>
+
+          <div id="photo-library-tray" class="photo-tray" aria-label="Sample and uploaded photos"></div>
+
           <div class="tray-actions">
-            <button id="btn-autofill-one" class="btn-ghost btn-xs" type="button" title="Fill all panels with the active photo using varied dramatic crops">Auto-fill 1 photo</button>
-            <button id="btn-distribute-all" class="btn-ghost btn-xs" type="button" title="Distribute all loaded photos across panels">Distribute photos</button>
+            <button id="fill-all-panels-btn" class="btn-fill-all" type="button" title="Distribute loaded photos across all panels">Fill All Panels</button>
+            <button id="autofill-one-photo-btn" class="btn-sub-action" type="button" title="Fill every panel with varied crops of the active photo">1 Photo → All</button>
           </div>
         </section>
 
         <section class="panel-section">
           <div class="section-head">
-            <h2>Panel Layout</h2>
+            <h2>Crop &amp; Position</h2>
+            <span id="active-panel-badge" class="panel-chip">Panel 1 · Hero</span>
           </div>
-          <div id="layout-grid" class="layout-grid" role="radiogroup" aria-label="Panel layout"></div>
-        </section>
 
-        <section class="panel-section">
-          <div class="section-head">
-            <h2>Vice Color Grade</h2>
+          <div class="panel-sub-bar">
+            <label class="btn-inline-link" for="replace-panel-photo-input">
+              Replace Panel Photo
+              <input id="replace-panel-photo-input" type="file" accept="image/*" hidden>
+            </label>
+            <div class="mini-btn-pair">
+              <button id="flip-panel-btn" class="btn-mini" type="button" title="Flip horizontally (F)">Flip</button>
+              <button id="reset-panel-crop-btn" class="btn-mini" type="button" title="Reset crop (R)">Reset</button>
+            </div>
           </div>
-          <div id="grade-grid" class="grade-grid" role="radiogroup" aria-label="Color grade"></div>
 
           <div class="slider-stack">
             <label class="slider-row">
               <span class="slider-label">
-                <span>Painterly Art</span>
-                <output id="paint-val" class="num-val">72%</output>
+                <span>Zoom</span>
+                <output id="panel-zoom-val" class="num-val">1.05×</output>
               </span>
-              <input id="paint-slider" type="range" min="0" max="100" value="72">
+              <input id="panel-zoom-slider" class="range-cyan" type="range" min="100" max="280" value="105">
             </label>
+
+            <div class="control-grid-2">
+              <label class="slider-row">
+                <span class="slider-label">
+                  <span>Pos X</span>
+                  <output id="panel-pan-x-val" class="num-val">0%</output>
+                </span>
+                <input id="panel-pan-x-slider" class="range-gold" type="range" min="-65" max="65" value="0">
+              </label>
+              <label class="slider-row">
+                <span class="slider-label">
+                  <span>Pos Y</span>
+                  <output id="panel-pan-y-val" class="num-val">0%</output>
+                </span>
+                <input id="panel-pan-y-slider" class="range-gold" type="range" min="-65" max="65" value="0">
+              </label>
+            </div>
+
             <label class="slider-row">
               <span class="slider-label">
-                <span>Ink Contours</span>
-                <output id="ink-val" class="num-val">58%</output>
+                <span>Rotate</span>
+                <output id="panel-rotate-val" class="num-val">0°</output>
               </span>
-              <input id="ink-slider" type="range" min="0" max="100" value="58">
-            </label>
-            <label class="slider-row">
-              <span class="slider-label">
-                <span>Halftone Print</span>
-                <output id="halftone-val" class="num-val">32%</output>
-              </span>
-              <input id="halftone-slider" type="range" min="0" max="100" value="32">
+              <input id="panel-rotate-slider" class="range-pink" type="range" min="-25" max="25" value="0">
             </label>
           </div>
+
+          <div class="control-grid-2 compact-top">
+            <label class="field">
+              <span>Swap Panel</span>
+              <select id="swap-panel-select" aria-label="Swap with panel"></select>
+            </label>
+            <label class="field">
+              <span>Panel Grade</span>
+              <select id="panel-grade-select" aria-label="Per-panel color grade"></select>
+            </label>
+          </div>
+
+          <label class="field compact-top">
+            <span>Panel Location Stamp</span>
+            <input id="panel-stamp-input" type="text" maxlength="30" placeholder="OCEAN DRIVE · 6:42 PM">
+          </label>
         </section>
       </aside>
 
       <!-- Center Live Canvas Stage -->
-      <main class="stage" aria-label="Live poster preview">
-        <div id="stage-frame" class="stage-frame">
-          <canvas id="cover-canvas" width="1280" height="720" aria-label="Interactive GTA cover art canvas"></canvas>
-          <div id="drop-overlay" class="drop-overlay" hidden>
+      <main class="stage" aria-label="Live cover art preview">
+        <div id="canvas-stage-frame" class="stage-frame">
+          <canvas id="cover-preview-canvas" width="1280" height="720" aria-label="Interactive Vice Cover Studio canvas"></canvas>
+          <div id="canvas-drop-overlay" class="drop-overlay" hidden>
             <span>Drop photo onto panel</span>
           </div>
         </div>
 
         <div class="stage-bar">
+          <div id="quick-preset-bar" class="preset-bar" role="group" aria-label="Cover theme presets"></div>
           <div class="stage-hint">
-            <span id="active-panel-badge" class="panel-chip">Panel 1 · Hero</span>
-            <span class="hint-text">Click panel to select · Drag to pan · Scroll to zoom · Drop image on any panel</span>
-          </div>
-          <div class="stage-tools">
-            <button id="btn-flip" class="btn-icon-text" type="button" title="Flip selected panel horizontally (F)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M12 3v18M8 7l-5 5 5 5M16 7l5 5-5 5"/>
-              </svg>
-              <span>Flip</span>
-            </button>
-            <button id="btn-reset-crop" class="btn-icon-text" type="button" title="Reset crop of selected panel (R)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/>
-                <path d="M3 3v5h5"/>
-              </svg>
-              <span>Reset</span>
-            </button>
-            <span id="status-line" class="status-line" role="status" aria-live="polite">Ready offline</span>
+            <span class="hint-text">Drag pan · Scroll zoom · Drop</span>
+            <span id="studio-status-line" class="status-line" role="status" aria-live="polite">Offline · 100% local</span>
           </div>
         </div>
       </main>
 
-      <!-- Right Rail: Panel Framing, Cover Lettering & 1-Click PNG Export -->
-      <aside class="rail rail-right" aria-label="Panel crop, lettering and export">
+      <!-- Right Rail: 8 Visual Layouts, 6 Color Grades, Sliders, Borders, Caption, Quote & Seal -->
+      <aside class="rail rail-right" aria-label="Layouts, color grade, borders and captions">
         <section class="panel-section">
           <div class="section-head">
-            <h2>Selected Panel</h2>
-            <label class="btn-inline-upload" for="upload-panel">
-              Replace photo
-              <input id="upload-panel" type="file" accept="image/*" hidden>
-            </label>
+            <h2>Multi-Panel Layout</h2>
+            <span class="meta-pill">8 Grids</span>
+          </div>
+          <div id="multi-panel-layout-picker" class="layout-grid" role="radiogroup" aria-label="Multi-panel layouts"></div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-head">
+            <h2>Color Grade &amp; Art</h2>
+            <div id="panel-border-style-picker" class="border-pills" role="radiogroup" aria-label="Panel border color"></div>
           </div>
 
-          <div class="control-grid-2">
-            <label class="slider-row">
-              <span class="slider-label">
-                <span>Zoom</span>
-                <output id="zoom-val" class="num-val">1.05×</output>
-              </span>
-              <input id="zoom-slider" type="range" min="100" max="280" value="105">
-            </label>
-            <label class="slider-row">
-              <span class="slider-label">
-                <span>Rotate</span>
-                <output id="rotate-val" class="num-val">0°</output>
-              </span>
-              <input id="rotate-slider" type="range" min="-25" max="25" value="0">
-            </label>
-          </div>
+          <div id="color-grade-swatch-picker" class="grade-grid" role="radiogroup" aria-label="Color grades"></div>
 
-          <div class="control-grid-2">
-            <label class="field">
-              <span>Swap Panel</span>
-              <select id="swap-select" aria-label="Swap with another panel"></select>
+          <div class="slider-grid-3">
+            <label class="slider-row">
+              <span class="slider-label">
+                <span>Painterly</span>
+                <output id="painterly-val" class="num-val">72%</output>
+              </span>
+              <input id="painterly-art-slider" class="range-gold" type="range" min="0" max="100" value="72">
             </label>
-            <label class="field">
-              <span>Panel Grade</span>
-              <select id="panel-grade-select" aria-label="Per-panel color grade override"></select>
+            <label class="slider-row">
+              <span class="slider-label">
+                <span>Ink</span>
+                <output id="sobel-ink-val" class="num-val">58%</output>
+              </span>
+              <input id="sobel-ink-slider" class="range-pink" type="range" min="0" max="100" value="58">
+            </label>
+            <label class="slider-row">
+              <span class="slider-label">
+                <span>Grade</span>
+                <output id="grade-intensity-val" class="num-val">86%</output>
+              </span>
+              <input id="grade-intensity-slider" class="range-cyan" type="range" min="0" max="100" value="86">
             </label>
           </div>
         </section>
 
         <section class="panel-section">
           <div class="section-head">
-            <h2>Cover Lettering</h2>
+            <h2>Captions, Quote &amp; Seal</h2>
           </div>
 
           <div class="field-stack">
-            <label class="field">
-              <span>Main Title</span>
-              <input id="caption-title" type="text" maxlength="28" value="VICE HORIZON" placeholder="VICE HORIZON">
-            </label>
-
             <div class="control-grid-2">
               <label class="field">
-                <span>Neon Script</span>
-                <input id="caption-script" type="text" maxlength="24" value="Miami Sunset" placeholder="Miami Sunset">
+                <span>Main Title</span>
+                <input id="caption-title-input" type="text" maxlength="28" value="VICE HORIZON">
               </label>
               <label class="field">
-                <span>Corner Badge</span>
-                <input id="badge-text" type="text" maxlength="14" value="VOL. 06" placeholder="VOL. 06">
+                <span>Neon Script</span>
+                <input id="caption-script-input" type="text" maxlength="24" value="Sunset Syndicate">
               </label>
             </div>
 
             <label class="field">
-              <span>Tagline</span>
-              <input id="caption-tagline" type="text" maxlength="46" value="EVERY STREET HAS A PRICE" placeholder="EVERY STREET HAS A PRICE">
+              <span>5-Star Press Quote</span>
+              <input id="press-quote-input" type="text" maxlength="54" value='★★★★★  "PURE SUNSET ADRENALINE" — VICE WEEKLY'>
             </label>
 
             <div class="control-grid-2">
               <label class="field">
+                <span>Tagline</span>
+                <input id="caption-tagline-input" type="text" maxlength="46" value="EVERY STREET HAS A PRICE">
+              </label>
+              <label class="field">
+                <span>Edition Badge</span>
+                <input id="corner-badge-input" type="text" maxlength="16" value="VOL. 06">
+              </label>
+            </div>
+
+            <div class="control-grid-2">
+              <label class="field">
                 <span>Title Style</span>
-                <select id="title-style">
+                <select id="title-style-select">
                   <option value="sunset-extrude">Sunset Gold 3D</option>
-                  <option value="neon-chrome">Neon Chrome</option>
-                  <option value="noir-gold">Noir Crimson</option>
+                  <option value="neon-chrome">Neon Cyan 3D</option>
+                  <option value="golden-heat">Molten Gold 3D</option>
+                  <option value="noir-gold">Noir Crimson 3D</option>
                   <option value="clean-ink">Poster White</option>
                 </select>
               </label>
               <label class="field">
                 <span>Placement</span>
-                <select id="title-position">
-                  <option value="bottom-center">Bottom Center</option>
-                  <option value="top-banner">Top Hero</option>
-                  <option value="bottom-left">Lower Left</option>
+                <select id="title-position-select">
+                  <option value="docked-bottom">Bottom Stage</option>
+                  <option value="top-banner">Top Stage</option>
+                  <option value="overlay-bottom">Lower Overlay</option>
                   <option value="center-emblem">Center Emblem</option>
                 </select>
               </label>
@@ -257,39 +291,26 @@
 
             <div class="toggle-grid">
               <label class="toggle-row">
-                <input id="toggle-stars" type="checkbox" checked>
-                <span>5-Star Heat</span>
+                <input id="toggle-location-stamps" type="checkbox" checked>
+                <span>Stamps</span>
               </label>
               <label class="toggle-row">
-                <input id="toggle-footer" type="checkbox" checked>
-                <span>Footer Strip</span>
+                <input id="toggle-original-seal" type="checkbox" checked>
+                <span>Seal</span>
               </label>
               <label class="toggle-row">
-                <input id="toggle-starburst" type="checkbox" checked>
-                <span>Edition Seal</span>
+                <input id="toggle-press-quote" type="checkbox" checked>
+                <span>Quote</span>
+              </label>
+              <label class="toggle-row">
+                <input id="toggle-heat-stars" type="checkbox" checked>
+                <span>5★ Heat</span>
+              </label>
+              <label class="toggle-row">
+                <input id="toggle-footer-strip" type="checkbox" checked>
+                <span>Footer</span>
               </label>
             </div>
-          </div>
-        </section>
-
-        <section class="panel-section export-section">
-          <div class="section-head">
-            <h2>Export PNG</h2>
-            <span class="meta-pill">Lossless</span>
-          </div>
-          <div class="export-buttons">
-            <button id="export-landscape" class="btn-export" type="button" data-export="landscape">
-              <span class="exp-dim">1920 × 1080</span>
-              <span class="exp-tag">16:9</span>
-            </button>
-            <button id="export-portrait" class="btn-export" type="button" data-export="portrait">
-              <span class="exp-dim">1080 × 1350</span>
-              <span class="exp-tag">4:5</span>
-            </button>
-            <button id="export-square" class="btn-export" type="button" data-export="square">
-              <span class="exp-dim">1080 × 1080</span>
-              <span class="exp-tag">1:1</span>
-            </button>
           </div>
         </section>
       </aside>

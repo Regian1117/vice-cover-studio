@@ -1,19 +1,22 @@
 // Client-side Canvas 2D Graphic-Novel / Painterly GTA Illustration Pipeline
-// Transforms any user photograph into illustrated Vice City cover art offline:
+// Runs 100% offline to unify tonal exposure across multi-panel covers and convert any photo into key art:
 // 1) Edge-preserving bilateral painterly smoothing (flattens photo noise into airbrush planes)
-// 2) Auto-levels (2nd-98th percentile contrast stretch) + dusk exposure pull for bright daylight photos
-// 3) Soft multi-band cel/gouache tonal quantization (preserves flattering skin & detail)
-// 4) Split-tone Vice City 3-way color grading with natural skin-hue protection
-// 5) Sobel ink-contour edge accent + optional shadow halftone print dots
-// 6) Specular warm highlight bloom + subtle collector-print micro-grain
+// 2) Unified filmic auto-levels (smooth 2nd-98th percentile stretch + dusk/shadow harmony)
+// 3) Soft multi-band cel/gouache tonal quantization
+// 4) Smooth skin-hue-protected 3-way split-tone Vice City grading (scaled by gradeStrength)
+// 5) Skin-aware Sobel ink contour outlines + optional shadow halftone print dots
 
 import { getGradeById } from './grades.js';
 
-const MAX_CACHE_ENTRIES = 28;
+const MAX_CACHE_ENTRIES = 36;
 const stylizeCache = new Map();
 
 function clamp255(v) {
   return v < 0 ? 0 : v > 255 ? 255 : v;
+}
+
+function clamp01(v) {
+  return v < 0 ? 0 : v > 1 ? 1 : v;
 }
 
 function makeOffscreen(w, h) {
@@ -28,15 +31,12 @@ export function clearArtCache() {
 }
 
 // Fast 2-pass edge-preserving bilateral approximation on RGB buffer.
-// Preserves crisp edges (eyes, hair, car contours, palm fronds) while turning flat skin/sky/asphalt
-// into smooth airbrushed brush planes characteristic of GTA cover illustrations.
 export function applyPainterlySmoothing(src, width, height, radius, sigmaColor) {
   const len = width * height * 4;
   const tmp = new Uint8ClampedArray(len);
   const dst = new Uint8ClampedArray(len);
   const invSigma2 = 1 / (2 * sigmaColor * sigmaColor);
 
-  // Horizontal pass
   for (let y = 0; y < height; y++) {
     const rowOff = y * width * 4;
     for (let x = 0; x < width; x++) {
@@ -66,7 +66,6 @@ export function applyPainterlySmoothing(src, width, height, radius, sigmaColor) 
     }
   }
 
-  // Vertical pass
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = (y * width + x) * 4;
@@ -119,7 +118,7 @@ export function computeSobelEdges(buf, width, height) {
   return edges;
 }
 
-// 2nd–98th percentile luminance histogram stretch + gentle dusk pull for bright daylight shots
+// Unified filmic auto-levels across panels: normalizes highlights & shadows so bright and night shots harmonize
 export function computeAutoLevelsParams(buf, width, height) {
   const hist = new Uint32Array(256);
   const total = width * height;
@@ -142,16 +141,33 @@ export function computeAutoLevelsParams(buf, width, height) {
     if (!gotMed && acc >= medTarget) { medianLum = bin; gotMed = true; }
     if (acc >= hiTarget) { pHigh = bin; break; }
   }
-  const low = pLow * 0.72;
+  const low = pLow * 0.68;
   const high = 255 - (255 - pHigh) * 0.72;
-  const invRange = 255 / Math.max(48, high - low);
-  const duskGamma = medianLum > 128
-    ? 1 + Math.min(0.42, ((medianLum - 124) / 131) * 0.65)
-    : 1.0;
-  return { low, invRange, duskGamma };
+  const invRange = 255 / Math.max(52, high - low);
+  // Bring overly bright photos gently toward twilight and lift deep night midtones slightly for panel cohesion
+  let duskGamma = 1.0;
+  if (medianLum > 124) {
+    duskGamma = 1 + Math.min(0.40, ((medianLum - 122) / 133) * 0.62);
+  } else if (medianLum < 88) {
+    duskGamma = 1 - Math.min(0.18, ((88 - medianLum) / 88) * 0.24);
+  }
+  const shadowLift = medianLum < 78 ? 0.032 : 0.014;
+  return { low, invRange, duskGamma, shadowLift };
 }
 
-// Auto-levels + soft-knee posterization + split-tone Vice City grade + ink contour + shadow halftone
+// Smooth continuous skin-hue protection weight [0..0.52] to keep skin tones natural under strong sunset/neon LUTs
+function computeSkinProtection(r, g, b, luma) {
+  if (luma < 0.18 || luma > 0.88) return 0;
+  const rg = r - g;
+  const rb = r - b;
+  if (rg <= 0.015 || rb <= 0.055) return 0;
+  const warmthGate = clamp01((rb - 0.055) / 0.14);
+  const balanceGate = clamp01((rg - 0.015) / 0.10) * clamp01(1 - Math.max(0, rg - 0.28) / 0.24);
+  const lumaGate = clamp01((luma - 0.18) / 0.18) * clamp01((0.90 - luma) / 0.20);
+  return 0.52 * warmthGate * balanceGate * lumaGate;
+}
+
+// Auto-levels + cel tonal quantization + smooth skin-guarded 3-way grade + Sobel ink + subtle halftone
 export function applyViceColorGradeAndInk(
   src,
   painted,
@@ -161,7 +177,8 @@ export function applyViceColorGradeAndInk(
   gradeId,
   paintStrength,
   inkStrength,
-  halftoneStrength = 0.32,
+  gradeStrength = 0.86,
+  halftoneStrength = 0.24,
   highRes = false,
 ) {
   const grade = getGradeById(gradeId);
@@ -169,19 +186,21 @@ export function applyViceColorGradeAndInk(
   const [sr, sg, sb] = grade.shadowRgb;
   const [mr, mg, mb] = grade.midRgb;
   const [hr, hg, hb] = grade.highRgb;
-  const contrast = grade.contrast;
-  const sat = grade.saturation;
-  const warm = grade.warmth;
-  const expBias = grade.exposureBias || 0;
 
-  const { low, invRange, duskGamma } = computeAutoLevelsParams(painted, width, height);
-  const paintMix = Math.max(0, Math.min(1, paintStrength));
-  const posterMix = paintMix * 0.34;
-  const levels = 7.5;
-  const inkAlphaMax = Math.max(0, Math.min(1, inkStrength)) * 0.78;
-  const inkThresholdLow = 42;
-  const inkThresholdHigh = 138;
-  const htAmt = Math.max(0, Math.min(1, halftoneStrength));
+  const gradeMix = clamp01(gradeStrength);
+  const contrast = 1 + (grade.contrast - 1) * (0.45 + 0.55 * gradeMix);
+  const sat = 1 + (grade.saturation - 1) * (0.35 + 0.65 * gradeMix);
+  const warm = grade.warmth * gradeMix;
+  const expBias = (grade.exposureBias || 0) * gradeMix;
+
+  const { low, invRange, duskGamma, shadowLift } = computeAutoLevelsParams(painted, width, height);
+  const paintMix = clamp01(paintStrength);
+  const posterMix = paintMix * 0.30;
+  const levels = 8.0;
+  const inkAlphaMax = clamp01(inkStrength) * 0.74;
+  const inkThresholdLow = 44;
+  const inkThresholdHigh = 142;
+  const htAmt = clamp01(halftoneStrength);
   const htFreq = (Math.PI * 2) / (highRes ? 7.0 : 4.5);
   const cos45 = 0.70710678;
 
@@ -190,30 +209,25 @@ export function applyViceColorGradeAndInk(
       const i = y * width + x;
       const p = i * 4;
 
-      // 1) Mix painterly plane with micro-detail from original
       let r = src[p] * (1 - paintMix) + painted[p] * paintMix;
       let g = src[p + 1] * (1 - paintMix) + painted[p + 1] * paintMix;
       let b = src[p + 2] * (1 - paintMix) + painted[p + 2] * paintMix;
 
-      // 2) Auto-levels stretch (2%-98%) + dusk gamma + grade exposure bias
-      let nr = ((r - low) * invRange) / 255;
-      let ng = ((g - low) * invRange) / 255;
-      let nb = ((b - low) * invRange) / 255;
-      nr = nr < 0 ? 0 : nr > 1 ? 1 : nr;
-      ng = ng < 0 ? 0 : ng > 1 ? 1 : ng;
-      nb = nb < 0 ? 0 : nb > 1 ? 1 : nb;
-      if (duskGamma > 1.005) {
+      let nr = clamp01(((r - low) * invRange) / 255);
+      let ng = clamp01(((g - low) * invRange) / 255);
+      let nb = clamp01(((b - low) * invRange) / 255);
+
+      if (Math.abs(duskGamma - 1.0) > 0.008) {
         nr = Math.pow(nr, duskGamma);
         ng = Math.pow(ng, duskGamma);
         nb = Math.pow(nb, duskGamma);
       }
-      if (expBias !== 0) {
-        nr = Math.max(0, Math.min(1, nr + expBias));
-        ng = Math.max(0, Math.min(1, ng + expBias));
-        nb = Math.max(0, Math.min(1, nb + expBias));
-      }
 
-      // 3) Soft tonal cel-shading / gouache quantization on luminance
+      nr = clamp01(nr * (1 - shadowLift) + shadowLift + expBias);
+      ng = clamp01(ng * (1 - shadowLift) + shadowLift + expBias);
+      nb = clamp01(nb * (1 - shadowLift) + shadowLift + expBias);
+
+      // Soft cel/gouache luminance quantization
       const lum0 = nr * 0.299 + ng * 0.587 + nb * 0.114;
       if (posterMix > 0.01 && lum0 > 0.004) {
         const q = Math.round(lum0 * levels) / levels;
@@ -224,35 +238,27 @@ export function applyViceColorGradeAndInk(
         nb = Math.min(1, nb * ratio);
       }
 
-      // 4) Punchy S-curve contrast
-      nr = (nr - 0.5) * contrast + 0.5;
-      ng = (ng - 0.5) * contrast + 0.5;
-      nb = (nb - 0.5) * contrast + 0.5;
-      nr = nr < 0 ? 0 : nr > 1 ? 1 : nr;
-      ng = ng < 0 ? 0 : ng > 1 ? 1 : ng;
-      nb = nb < 0 ? 0 : nb > 1 ? 1 : nb;
+      // Punchy filmic S-curve contrast
+      nr = clamp01((nr - 0.5) * contrast + 0.5);
+      ng = clamp01((ng - 0.5) * contrast + 0.5);
+      nb = clamp01((nb - 0.5) * contrast + 0.5);
 
-      // 5) Vibrance / Saturation + skin-hue guard
+      // Smooth skin protection + adaptive vibrance
       const luma = nr * 0.299 + ng * 0.587 + nb * 0.114;
-      const skinKeep =
-        nr > ng && ng > nb && (nr - nb) > 0.08 && nr > 0.26 && luma > 0.22 && luma < 0.86
-          ? 0.35
-          : 0.0;
+      const skinKeep = computeSkinProtection(nr, ng, nb, luma);
 
-      const maxC = Math.max(nr, ng, nb);
-      const minC = Math.min(nr, ng, nb);
-      const curSat = maxC - minC;
-      const adaptiveSat = 1 + (sat - 1) * (1 - curSat * 0.42);
+      const curSat = Math.max(nr, ng, nb) - Math.min(nr, ng, nb);
+      const adaptiveSat = 1 + (sat - 1) * (1 - curSat * 0.42) * (1 - skinKeep * 0.48);
       nr = luma + (nr - luma) * adaptiveSat + warm * 0.22;
       ng = luma + (ng - luma) * adaptiveSat + warm * 0.06;
       nb = luma + (nb - luma) * adaptiveSat - warm * 0.18;
 
-      // 6) 3-way Split-Tone Vice City Color Grade (shadows, midtones, highlights)
-      const lum = Math.max(0, Math.min(1, nr * 0.299 + ng * 0.587 + nb * 0.114));
+      // 3-way split-tone Vice City grade scaled by gradeMix
+      const lum = clamp01(nr * 0.299 + ng * 0.587 + nb * 0.114);
       const skinGuard = 1 - skinKeep;
-      const shadowW = Math.pow(1 - lum, 2.1) * grade.shadowMix * skinGuard;
-      const highW = Math.pow(lum, 2.0) * grade.highMix * (1 - skinKeep * 0.5);
-      const midW = Math.sin(lum * Math.PI) * grade.midMix * skinGuard;
+      const shadowW = Math.pow(1 - lum, 2.05) * grade.shadowMix * gradeMix * skinGuard;
+      const highW = Math.pow(lum, 1.95) * grade.highMix * gradeMix * (1 - skinKeep * 0.45);
+      const midW = Math.sin(lum * Math.PI) * grade.midMix * gradeMix * skinGuard;
 
       let fr = nr * 255;
       let fg = ng * 255;
@@ -270,29 +276,29 @@ export function applyViceColorGradeAndInk(
       fg = fg * (1 - highW) + hg * highW;
       fb = fb * (1 - highW) + hb * highW;
 
-      // 7) Subtle 45-degree Halftone Print dots strictly in deep shadows (never smudges skin)
-      if (htAmt > 0.01 && lum < 0.45) {
+      // Subtle 45-degree halftone dots strictly in shadows
+      if (htAmt > 0.01 && lum < 0.42) {
         const u = (x - y) * cos45;
         const v = (x + y) * cos45;
         const wave = 0.5 * (Math.cos(u * htFreq) * Math.cos(v * htFreq) + 1);
-        const shadowBand = Math.pow(1 - lum / 0.45, 1.6);
-        const dotMask = wave * shadowBand * (1 - skinKeep * 0.8) * htAmt * 0.38;
+        const shadowBand = Math.pow(1 - lum / 0.42, 1.65);
+        const dotMask = wave * shadowBand * (1 - skinKeep * 0.9) * htAmt * 0.34;
         if (dotMask > 0.01) {
-          fr = fr * (1 - dotMask) + 13 * dotMask;
-          fg = fg * (1 - dotMask) + 7 * dotMask;
-          fb = fb * (1 - dotMask) + 22 * dotMask;
+          fr = fr * (1 - dotMask) + 14 * dotMask;
+          fg = fg * (1 - dotMask) + 8 * dotMask;
+          fb = fb * (1 - dotMask) + 24 * dotMask;
         }
       }
 
-      // 8) Crisp Ink Contour Edge Accent (dark indigo-obsidian linework)
+      // Skin-aware Sobel ink contour accent
       if (inkAlphaMax > 0.01) {
         const mag = edges[i];
         if (mag > inkThresholdLow) {
           const t = Math.min(1, (mag - inkThresholdLow) / (inkThresholdHigh - inkThresholdLow));
-          const inkAmt = t * t * inkAlphaMax;
+          const inkAmt = t * t * inkAlphaMax * (1 - skinKeep * 0.52);
           fr = fr * (1 - inkAmt) + 14 * inkAmt;
-          fg = fg * (1 - inkAmt) + 6 * inkAmt;
-          fb = fb * (1 - inkAmt) + 22 * inkAmt;
+          fg = fg * (1 - inkAmt) + 7 * inkAmt;
+          fb = fb * (1 - inkAmt) + 24 * inkAmt;
         }
       }
 
@@ -305,20 +311,22 @@ export function applyViceColorGradeAndInk(
   return out;
 }
 
-// Stylize a source image into a cached offscreen canvas ready for 60fps panel compositing
-export function getStylizedImageCanvas(
+// Run complete Painterly + Sobel Ink + Vice Grade pipeline into an LRU cached offscreen canvas
+export function runPainterlySobelInkPipeline(
   imageEntry,
   gradeId,
   paintStrength,
   inkStrength,
-  halftoneStrength = 0.32,
+  gradeStrength = 0.86,
+  halftoneStrength = 0.24,
   highRes = false,
 ) {
   const qPaint = Math.round(paintStrength * 20) / 20;
   const qInk = Math.round(inkStrength * 20) / 20;
-  const qHt = Math.round((halftoneStrength ?? 0.32) * 20) / 20;
-  const maxDim = highRes ? 1040 : 620;
-  const cacheKey = `${imageEntry.id}|${gradeId}|${qPaint}|${qInk}|${qHt}|${maxDim}`;
+  const qGrade = Math.round((gradeStrength ?? 0.86) * 20) / 20;
+  const qHt = Math.round((halftoneStrength ?? 0.24) * 20) / 20;
+  const maxDim = highRes ? 1080 : 620;
+  const cacheKey = `${imageEntry.id}|${gradeId}|${qPaint}|${qInk}|${qGrade}|${qHt}|${maxDim}`;
 
   if (stylizeCache.has(cacheKey)) {
     const cached = stylizeCache.get(cacheKey);
@@ -341,34 +349,43 @@ export function getStylizedImageCanvas(
   const imgData = wctx.getImageData(0, 0, w, h);
   const src = imgData.data;
 
-  // Painterly bilateral pass (radius scales with resolution)
   const radius = highRes ? 4 : 3;
   const painted = qPaint > 0.02
     ? applyPainterlySmoothing(src, w, h, radius, 34)
     : src;
 
-  // Sobel edge contours computed on the smooth painterly buffer so noise never turns into speckles!
   const edges = qInk > 0.02
     ? computeSobelEdges(painted, w, h)
     : new Float32Array(w * h);
 
-  const graded = applyViceColorGradeAndInk(src, painted, edges, w, h, gradeId, qPaint, qInk, qHt, highRes);
+  const graded = applyViceColorGradeAndInk(
+    src,
+    painted,
+    edges,
+    w,
+    h,
+    gradeId,
+    qPaint,
+    qInk,
+    qGrade,
+    qHt,
+    highRes,
+  );
   imgData.data.set(graded);
   wctx.putImageData(imgData, 0, 0);
 
-  // Subtle specular highlight bloom (warm screen-blended soft glow)
   const grade = getGradeById(gradeId);
   const bloomCanvas = makeOffscreen(Math.max(32, Math.round(w * 0.25)), Math.max(32, Math.round(h * 0.25)));
   const bctx = bloomCanvas.getContext('2d');
-  bctx.filter = 'brightness(1.25) contrast(1.8) blur(6px)';
+  bctx.filter = 'brightness(1.22) contrast(1.72) blur(6px)';
   bctx.drawImage(workCanvas, 0, 0, bloomCanvas.width, bloomCanvas.height);
 
   wctx.save();
   wctx.globalCompositeOperation = 'screen';
-  wctx.globalAlpha = 0.24;
+  wctx.globalAlpha = 0.22 * (0.4 + 0.6 * qGrade);
   wctx.drawImage(bloomCanvas, 0, 0, w, h);
   wctx.fillStyle = grade.bloomColor;
-  wctx.globalAlpha = 0.16;
+  wctx.globalAlpha = 0.16 * qGrade;
   wctx.fillRect(0, 0, w, h);
   wctx.restore();
 
@@ -380,7 +397,8 @@ export function getStylizedImageCanvas(
   return workCanvas;
 }
 
-// Reusable deterministic fine print grain + halftone pattern for final poster polish
+export const getStylizedImageCanvas = runPainterlySobelInkPipeline;
+
 let cachedGrainPattern = null;
 export function getPosterGrainCanvas() {
   if (cachedGrainPattern) return cachedGrainPattern;
@@ -395,7 +413,7 @@ export function getPosterGrainCanvas() {
     data.data[i] = v;
     data.data[i + 1] = v;
     data.data[i + 2] = v;
-    data.data[i + 3] = 28;
+    data.data[i + 3] = 24;
   }
   ctx.putImageData(data, 0, 0);
   cachedGrainPattern = c;
