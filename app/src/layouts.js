@@ -51,6 +51,47 @@ function buildAngledRowGrid(rows, skew) {
 
 export const MULTI_PANEL_LAYOUTS = [
   {
+    id: 'center-hero-7',
+    name: '7-Panel Center Hero',
+    shortName: '7P Hero',
+    panelCount: 7,
+    paletteFill: ['#FF6B4A', '#FFC845', '#FF2FA8', '#2EE8FF', '#9E5BFF', '#FF8E3C', '#00D8C4'],
+    description: 'Dominant centered portrait hero flanked by 6 balanced angled wing panels',
+    getPanels(aspect) {
+      if (aspect > 1.22) {
+        return [
+          { id: 0, label: 'Center Hero', role: 'hero', points: [[0.336, 0.0], [0.664, 0.0], [0.644, 1.0], [0.356, 1.0]] },
+          { id: 1, label: 'Top Left', role: 'portrait', points: [[0.0, 0.0], [0.336, 0.0], [0.3445, 0.425], [0.0, 0.460]] },
+          { id: 2, label: 'Bot Far Left', role: 'action', points: [[0.0, 0.460], [0.178, 0.442], [0.162, 1.0], [0.0, 1.0]] },
+          { id: 3, label: 'Bot Mid Left', role: 'detail', points: [[0.178, 0.442], [0.3445, 0.425], [0.356, 1.0], [0.162, 1.0]] },
+          { id: 4, label: 'Top Right', role: 'closeup', points: [[0.664, 0.0], [1.0, 0.0], [1.0, 0.460], [0.6555, 0.425]] },
+          { id: 5, label: 'Bot Mid Right', role: 'skyline', points: [[0.6555, 0.425], [0.822, 0.442], [0.838, 1.0], [0.644, 1.0]] },
+          { id: 6, label: 'Bot Far Right', role: 'wide', points: [[0.822, 0.442], [1.0, 0.460], [1.0, 1.0], [0.838, 1.0]] },
+        ];
+      }
+      if (aspect < 0.90) {
+        return [
+          { id: 0, label: 'Center Hero', role: 'hero', points: [[0.23, 0.244], [0.78, 0.2305], [0.76, 0.744], [0.21, 0.730]] },
+          { id: 1, label: 'Top Left', role: 'portrait', points: [[0.0, 0.0], [0.51, 0.0], [0.49, 0.238], [0.0, 0.250]] },
+          { id: 2, label: 'Mid Left', role: 'action', points: [[0.0, 0.250], [0.23, 0.244], [0.21, 0.730], [0.0, 0.725]] },
+          { id: 3, label: 'Bot Left', role: 'detail', points: [[0.0, 0.725], [0.49, 0.737], [0.47, 1.0], [0.0, 1.0]] },
+          { id: 4, label: 'Top Right', role: 'closeup', points: [[0.51, 0.0], [1.0, 0.0], [1.0, 0.225], [0.49, 0.238]] },
+          { id: 5, label: 'Mid Right', role: 'skyline', points: [[0.78, 0.2305], [1.0, 0.225], [1.0, 0.750], [0.76, 0.744]] },
+          { id: 6, label: 'Bot Right', role: 'wide', points: [[0.49, 0.737], [1.0, 0.750], [1.0, 1.0], [0.47, 1.0]] },
+        ];
+      }
+      return [
+        { id: 0, label: 'Center Hero', role: 'hero', points: [[0.300, 0.0], [0.700, 0.0], [0.684, 1.0], [0.316, 1.0]] },
+        { id: 1, label: 'Top Left', role: 'portrait', points: [[0.0, 0.0], [0.300, 0.0], [0.3051, 0.320], [0.0, 0.345]] },
+        { id: 2, label: 'Mid Left', role: 'action', points: [[0.0, 0.345], [0.3051, 0.320], [0.3105, 0.655], [0.0, 0.675]] },
+        { id: 3, label: 'Bot Left', role: 'detail', points: [[0.0, 0.675], [0.3105, 0.655], [0.316, 1.0], [0.0, 1.0]] },
+        { id: 4, label: 'Top Right', role: 'closeup', points: [[0.700, 0.0], [1.0, 0.0], [1.0, 0.345], [0.6949, 0.320]] },
+        { id: 5, label: 'Mid Right', role: 'skyline', points: [[0.6949, 0.320], [1.0, 0.345], [1.0, 0.675], [0.6895, 0.655]] },
+        { id: 6, label: 'Bot Right', role: 'wide', points: [[0.6895, 0.655], [1.0, 0.675], [1.0, 1.0], [0.684, 1.0]] },
+      ];
+    },
+  },
+  {
     id: 'hero-slant-6',
     name: '6-Panel Hero Slant',
     shortName: '6P Slant',
@@ -149,36 +190,6 @@ export const MULTI_PANEL_LAYOUTS = [
           ],
         },
       ], 0.022);
-    },
-  },
-  {
-    id: 'magazine-7',
-    name: '7-Panel Magazine',
-    shortName: '7P Mag',
-    panelCount: 7,
-    paletteFill: ['#FF2FA8', '#FFC845', '#FF6B4A', '#2EE8FF', '#B87BFF', '#FF8E3C', '#00D8C4'],
-    description: '7-panel editorial feature spread with panoramic center stripe',
-    getPanels(aspect) {
-      if (aspect > 1.22) {
-        return [
-          { id: 0, label: 'Left Hero', role: 'hero', points: [[0.0, 0.0], [0.36, 0.0], [0.32, 1.0], [0.0, 1.0]] },
-          { id: 1, label: 'Top Left', role: 'action', points: [[0.36, 0.0], [0.58, 0.0], [0.56, 0.37], [0.345, 0.39]] },
-          { id: 2, label: 'Top Mid', role: 'skyline', points: [[0.58, 0.0], [0.79, 0.0], [0.77, 0.35], [0.56, 0.37]] },
-          { id: 3, label: 'Top Right', role: 'portrait', points: [[0.79, 0.0], [1.0, 0.0], [1.0, 0.33], [0.77, 0.35]] },
-          { id: 4, label: 'Mid Strip', role: 'wide', points: [[0.345, 0.39], [1.0, 0.33], [1.0, 0.65], [0.333, 0.69]] },
-          { id: 5, label: 'Bot Mid', role: 'detail', points: [[0.333, 0.69], [0.67, 0.67], [0.65, 1.0], [0.32, 1.0]] },
-          { id: 6, label: 'Bot Right', role: 'closeup', points: [[0.67, 0.67], [1.0, 0.65], [1.0, 1.0], [0.65, 1.0]] },
-        ];
-      }
-      return [
-        { id: 0, label: 'Top Hero', role: 'hero', points: [[0.0, 0.0], [0.56, 0.0], [0.52, 0.40], [0.0, 0.42]] },
-        { id: 1, label: 'Top Right', role: 'portrait', points: [[0.56, 0.0], [1.0, 0.0], [1.0, 0.38], [0.52, 0.40]] },
-        { id: 2, label: 'Mid Strip', role: 'wide', points: [[0.0, 0.42], [1.0, 0.38], [1.0, 0.64], [0.0, 0.67]] },
-        { id: 3, label: 'Low Left', role: 'action', points: [[0.0, 0.67], [0.52, 0.655], [0.49, 0.835], [0.0, 0.845]] },
-        { id: 4, label: 'Low Right', role: 'detail', points: [[0.52, 0.655], [1.0, 0.64], [1.0, 0.82], [0.49, 0.835]] },
-        { id: 5, label: 'Bot Left', role: 'skyline', points: [[0.0, 0.845], [0.50, 0.835], [0.48, 1.0], [0.0, 1.0]] },
-        { id: 6, label: 'Bot Right', role: 'closeup', points: [[0.50, 0.835], [1.0, 0.82], [1.0, 1.0], [0.48, 1.0]] },
-      ];
     },
   },
   {
@@ -351,27 +362,19 @@ export function hitTestPanel(geometries, px, py) {
 }
 
 // Varied dramatic crop presets when filling all panels with ONE user photo
-export function getSmartSinglePhotoTransform(panelIndex, role) {
-  const presets = {
-    hero: { zoom: 1.06, panX: 0.0, panY: -0.04, rotation: 0, flipH: false },
-    action: { zoom: 1.48, panX: -0.14, panY: -0.18, rotation: -3, flipH: true },
-    skyline: { zoom: 1.25, panX: 0.18, panY: -0.22, rotation: 2, flipH: false },
-    portrait: { zoom: 1.72, panX: 0.04, panY: -0.24, rotation: 0, flipH: false },
-    detail: { zoom: 1.62, panX: -0.18, panY: 0.16, rotation: 3, flipH: false },
-    closeup: { zoom: 2.05, panX: 0.08, panY: -0.26, rotation: -2, flipH: true },
-    wide: { zoom: 1.18, panX: 0.0, panY: 0.14, rotation: 0, flipH: false },
-  };
-  if (presets[role]) return { ...presets[role] };
-  const fallbacks = [
-    { zoom: 1.06, panX: 0, panY: -0.04, rotation: 0, flipH: false },
-    { zoom: 1.65, panX: 0.06, panY: -0.22, rotation: -2, flipH: true },
-    { zoom: 1.38, panX: -0.16, panY: 0.12, rotation: 2, flipH: false },
-    { zoom: 1.85, panX: -0.05, panY: -0.24, rotation: 0, flipH: false },
-    { zoom: 1.45, panX: 0.16, panY: 0.14, rotation: 3, flipH: true },
-    { zoom: 2.0, panX: 0.02, panY: -0.20, rotation: -3, flipH: false },
-    { zoom: 1.52, panX: -0.12, panY: 0.05, rotation: 1, flipH: true },
-    { zoom: 1.32, panX: 0.10, panY: -0.12, rotation: -1, flipH: false },
-    { zoom: 1.78, panX: -0.04, panY: -0.18, rotation: 2, flipH: false },
-  ];
-  return { ...fallbacks[panelIndex % fallbacks.length] };
+export const SMART_SINGLE_PHOTO_SHOTS = [
+  { zoom: 1.04, panX: 0.0, panY: 0.04, rotation: 0, flipH: false, cropFocalX: null, cropFocalY: null, label: 'FULL SHOT', preferredGrade: '' },
+  { zoom: 1.76, panX: 0.02, panY: 0.02, rotation: -3, flipH: false, cropFocalX: 0.54, cropFocalY: 0.24, label: 'CLOSE-UP', preferredGrade: 'vice-sunset' },
+  { zoom: 1.18, panX: 0.04, panY: 0.02, rotation: 2.0, flipH: false, cropFocalX: 0.10, cropFocalY: 0.16, label: 'WIDE ANGLE', preferredGrade: 'tropical-cyan' },
+  { zoom: 1.54, panX: -0.02, panY: -0.04, rotation: 3.5, flipH: false, cropFocalX: 0.32, cropFocalY: 0.76, label: 'DETAIL CROP', preferredGrade: 'vice-noir' },
+  { zoom: 1.66, panX: -0.04, panY: 0.02, rotation: -2.5, flipH: true, cropFocalX: 0.58, cropFocalY: 0.28, label: 'PROFILE', preferredGrade: 'midnight-neon' },
+  { zoom: 1.32, panX: 0.08, panY: -0.04, rotation: -2, flipH: false, cropFocalX: 0.76, cropFocalY: 0.22, label: 'SKYLINE', preferredGrade: 'synth-chrome' },
+  { zoom: 1.88, panX: -0.06, panY: 0.02, rotation: 2, flipH: true, cropFocalX: 0.42, cropFocalY: 0.46, label: 'ACTION CROP', preferredGrade: 'golden-heatwave' },
+  { zoom: 1.42, panX: 0.04, panY: 0.06, rotation: -1.5, flipH: false, cropFocalX: 0.68, cropFocalY: 0.72, label: 'LOW ANGLE', preferredGrade: 'vice-sunset' },
+  { zoom: 1.96, panX: 0.0, panY: -0.02, rotation: 1.5, flipH: true, cropFocalX: 0.50, cropFocalY: 0.26, label: 'TIGHT CROP', preferredGrade: 'tropical-cyan' },
+];
+
+export function getSmartSinglePhotoTransform(panelIndex, _role) {
+  const shot = SMART_SINGLE_PHOTO_SHOTS[panelIndex % SMART_SINGLE_PHOTO_SHOTS.length];
+  return { ...shot };
 }

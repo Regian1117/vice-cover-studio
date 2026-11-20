@@ -22,29 +22,32 @@ export function drawPanelPhoto(ctx, styledCanvas, panelBounds, panelState, photo
   const imgH = styledCanvas.height;
 
   const rotRad = ((panelState.rotation || 0) * Math.PI) / 180;
-  const rotMargin = 1 + Math.abs(Math.sin(rotRad)) * 0.42;
-  const coverScale = Math.max(w / imgW, h / imgH) * rotMargin;
+  const absCos = Math.abs(Math.cos(rotRad));
+  const absSin = Math.abs(Math.sin(rotRad));
+  const reqW = w * absCos + h * absSin;
+  const reqH = w * absSin + h * absCos;
+  const coverScale = Math.max(reqW / imgW, reqH / imgH);
   const zoom = Math.max(1, Math.min(3.2, panelState.zoom || 1));
   const finalScale = coverScale * zoom;
 
   const drawW = imgW * finalScale;
   const drawH = imgH * finalScale;
 
-  const focalX = photoEntry?.focalX ?? 0.5;
-  const focalY = photoEntry?.focalY ?? 0.44;
-  const maxShiftX = Math.max(0, (drawW - w) * 0.5);
-  const maxShiftY = Math.max(0, (drawH - h) * 0.5);
+  const focalX = panelState.cropFocalX ?? photoEntry?.focalX ?? 0.5;
+  const focalY = panelState.cropFocalY ?? photoEntry?.focalY ?? 0.44;
+  const maxShiftX = Math.max(0, (drawW - reqW) * 0.5);
+  const maxShiftY = Math.max(0, (drawH - reqH) * 0.5);
 
   const flipSign = panelState.flipH ? -1 : 1;
-  const autoOffsetX = Math.max(-maxShiftX, Math.min(maxShiftX, (0.5 - focalX) * drawW * flipSign));
-  const autoOffsetY = Math.max(-maxShiftY, Math.min(maxShiftY, (0.5 - focalY) * drawH));
-
-  const panPxX = autoOffsetX + (panelState.panX || 0) * w;
-  const panPxY = autoOffsetY + (panelState.panY || 0) * h;
+  const rawX = (0.5 - focalX) * drawW * flipSign + (panelState.panX || 0) * w;
+  const rawY = (0.5 - focalY) * drawH + (panelState.panY || 0) * h;
+  const panPxX = Math.max(-maxShiftX, Math.min(maxShiftX, rawX));
+  const panPxY = Math.max(-maxShiftY, Math.min(maxShiftY, rawY));
 
   ctx.save();
-  ctx.translate(cx + panPxX, cy + panPxY);
+  ctx.translate(cx, cy);
   if (rotRad) ctx.rotate(rotRad);
+  ctx.translate(panPxX, panPxY);
   if (panelState.flipH) ctx.scale(-1, 1);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
@@ -56,11 +59,25 @@ export function drawPanelPhoto(ctx, styledCanvas, panelBounds, panelState, photo
 function drawPanelBorderChrome(ctx, pts, gutterPx, dividerPx, borderStyle, isSelected, showSelection, accentColor, base) {
   const keylinePx = Math.max(2, Math.min(3.4, base * 0.0024));
 
-  // 1) Crisp inner keyline inside the clipped panel
+  // 1) Recessed inner cut-paper shadow + crisp inner keyline inside the clipped panel
   ctx.save();
   tracePolygon(ctx, pts);
   ctx.clip();
   ctx.lineJoin = 'miter';
+
+  ctx.shadowColor = 'rgba(4, 2, 12, 0.72)';
+  ctx.shadowBlur = Math.max(10, Math.round(gutterPx * 1.45));
+  ctx.shadowOffsetX = Math.round(base * 0.0022);
+  ctx.shadowOffsetY = Math.round(base * 0.0032);
+  ctx.lineWidth = gutterPx + Math.max(4, Math.round(base * 0.004));
+  ctx.strokeStyle = 'rgba(6, 3, 14, 0.88)';
+  ctx.stroke();
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
   ctx.lineWidth = gutterPx + keylinePx * 2;
   ctx.strokeStyle = borderStyle.innerKeyline;
   ctx.stroke();
@@ -106,12 +123,15 @@ function edgeYAtX(pA, pB, x) {
   return pA[1] + (pB[1] - pA[1]) * t;
 }
 
-// Punchy 2-word Character Role Tag plaque inside each panel, never colliding with giant title or face
+// Punchy Character Role Tag plaque (with optional episodic timestamp) inside each panel
 function drawPanelRoleTag(ctx, geom, roleText, mosaicTop, titleSafeTopY, base, gutterPx, accentColor, isHeroTall) {
   const clean = (roleText || '').trim().toUpperCase();
   if (!clean || geom.bounds.w < base * 0.13 || geom.bounds.h < base * 0.10) return;
 
-  const fontSize = Math.max(15, Math.min(26, Math.round(base * 0.0215)));
+  const isNarrowWing = geom.bounds.w < base * 0.34;
+  const fontSize = isNarrowWing
+    ? Math.max(13, Math.min(22, Math.round(base * 0.0185)))
+    : Math.max(15, Math.min(26, Math.round(base * 0.0215)));
   ctx.save();
   tracePolygon(ctx, geom.pts);
   ctx.clip();
@@ -119,11 +139,11 @@ function drawPanelRoleTag(ctx, geom, roleText, mosaicTop, titleSafeTopY, base, g
   ctx.font = `700 ${fontSize}px "Bebas Neue", sans-serif`;
   const padX = Math.round(fontSize * 0.48);
   const barW = Math.max(4, Math.round(fontSize * 0.22));
+  const edgePad = Math.round(gutterPx * 0.72 + base * 0.008);
   const textW = ctx.measureText(clean).width;
-  const maxBoxW = geom.bounds.w - 24;
+  const maxBoxW = geom.bounds.w - Math.round(edgePad * 2);
   const boxW = Math.min(maxBoxW, barW + textW + padX * 2.1);
   const boxH = Math.round(fontSize * 1.44);
-  const edgePad = Math.round(gutterPx * 0.72 + base * 0.008);
 
   const [p0, p1, p2, p3] = geom.pts;
   const overlapsTitle = geom.bounds.y + geom.bounds.h > titleSafeTopY - edgePad * 0.5;
@@ -166,10 +186,37 @@ function drawPanelRoleTag(ctx, geom, roleText, mosaicTop, titleSafeTopY, base, g
   ctx.fillStyle = accentColor;
   ctx.fillRect(tx + 1, ty + 1, barW, boxH - 2);
 
-  ctx.fillStyle = '#FFFBF2';
+  const textStartX = tx + barW + padX * 0.9;
+  const textCy = ty + boxH * 0.54;
+  const availTextW = Math.max(20, boxW - barW - padX * 1.4);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText(clean, tx + barW + padX * 0.9, ty + boxH * 0.54, boxW - barW - padX * 1.4);
+
+  if (clean.includes('·')) {
+    const parts = clean.split('·').map((s) => s.trim()).filter(Boolean);
+    const sep = ' · ';
+    const sepW = ctx.measureText(sep).width;
+    const totalW = parts.reduce((acc, p) => acc + ctx.measureText(p).width, 0) + sepW * Math.max(0, parts.length - 1);
+    const fitScale = Math.min(1, availTextW / Math.max(1, totalW));
+    ctx.save();
+    ctx.translate(textStartX, textCy);
+    if (fitScale < 1) ctx.scale(fitScale, 1);
+    let curX = 0;
+    for (let i = 0; i < parts.length; i++) {
+      ctx.fillStyle = '#FFFBF2';
+      ctx.fillText(parts[i], curX, 0);
+      curX += ctx.measureText(parts[i]).width;
+      if (i < parts.length - 1) {
+        ctx.fillStyle = accentColor;
+        ctx.fillText(sep, curX, 0);
+        curX += sepW;
+      }
+    }
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#FFFBF2';
+    ctx.fillText(clean, textStartX, textCy, availTextW);
+  }
   ctx.restore();
 }
 
@@ -220,6 +267,144 @@ function drawPanelLocationStamp(ctx, geom, stampText, outerFrame, topReservePx, 
   ctx.textBaseline = 'middle';
   ctx.fillText(clean, sx + barW + padX * 0.9, sy + boxH * 0.54, boxW - barW - padX * 1.4);
   ctx.restore();
+}
+
+function expandHeroGeometry(geom, popPx, minX, minY, maxX, maxY) {
+  const { cx, cy } = geom.bounds;
+  const pts = geom.pts.map(([x, y]) => {
+    const nx = Math.abs(x - minX) <= 2 || Math.abs(x - maxX) <= 2 ? x : x + (x >= cx ? popPx : -popPx);
+    const ny = Math.abs(y - minY) <= 2 || Math.abs(y - maxY) <= 2 ? y : y + (y >= cy ? popPx : -popPx);
+    return [Math.max(minX, Math.min(maxX, nx)), Math.max(minY, Math.min(maxY, ny))];
+  });
+  let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+  for (const [px, py] of pts) {
+    if (px < bMinX) bMinX = px;
+    if (py < bMinY) bMinY = py;
+    if (px > bMaxX) bMaxX = px;
+    if (py > bMaxY) bMaxY = py;
+  }
+  return {
+    ...geom,
+    pts,
+    bounds: {
+      x: bMinX,
+      y: bMinY,
+      w: bMaxX - bMinX,
+      h: bMaxY - bMinY,
+      cx: (bMinX + bMaxX) * 0.5,
+      cy: (bMinY + bMaxY) * 0.5,
+    },
+  };
+}
+
+function renderPanelArtwork(ctx, geom, pState, photoEntry, effectiveGradeId, state, grade, isExport) {
+  if (photoEntry && photoEntry.img) {
+    const styled = runPainterlySobelInkPipeline(
+      photoEntry,
+      effectiveGradeId,
+      state.paintStrength ?? 0.72,
+      state.inkStrength ?? 0.58,
+      state.gradeStrength ?? 0.92,
+      state.halftoneStrength ?? 0.34,
+      isExport,
+    );
+    drawPanelPhoto(ctx, styled, geom.bounds, pState, photoEntry);
+  } else {
+    const pg = ctx.createLinearGradient(
+      geom.bounds.x, geom.bounds.y,
+      geom.bounds.x + geom.bounds.w, geom.bounds.y + geom.bounds.h,
+    );
+    pg.addColorStop(0, '#1B1136');
+    pg.addColorStop(1, '#36133B');
+    ctx.fillStyle = pg;
+    ctx.fillRect(geom.bounds.x, geom.bounds.y, geom.bounds.w, geom.bounds.h);
+  }
+
+  const vRad = Math.max(geom.bounds.w, geom.bounds.h) * 0.72;
+  const vg = ctx.createRadialGradient(
+    geom.bounds.cx, geom.bounds.cy, vRad * 0.34,
+    geom.bounds.cx, geom.bounds.cy, vRad,
+  );
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, grade.vignetteRim || 'rgba(10, 5, 22, 0.46)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(geom.bounds.x, geom.bounds.y, geom.bounds.w, geom.bounds.h);
+
+  if (grade.rimGlow) {
+    const rg = ctx.createLinearGradient(0, geom.bounds.y, 0, geom.bounds.y + geom.bounds.h * 0.42);
+    rg.addColorStop(0, grade.rimGlow);
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = rg;
+    ctx.fillRect(geom.bounds.x, geom.bounds.y, geom.bounds.w, geom.bounds.h * 0.42);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+}
+
+function renderPanelBadges(ctx, geom, pState, photoEntry, state, mosaicTop, mosaicBottom, titleSafeTopY, outerFrame, topReservePx, width, base, gutterPx, accentColor) {
+  const showRoleTags = state.showRoleTags !== false;
+  if (showRoleTags) {
+    const roleText = pState.role !== undefined && pState.role !== ''
+      ? pState.role
+      : (photoEntry?.defaultRole || '');
+    if (roleText) {
+      const isHeroTall = geom.bounds.h > (mosaicBottom - mosaicTop) * 0.72;
+      drawPanelRoleTag(
+        ctx,
+        geom,
+        roleText,
+        mosaicTop,
+        titleSafeTopY,
+        base,
+        gutterPx,
+        accentColor,
+        isHeroTall,
+      );
+    }
+  }
+
+  if (state.showLocationStamps) {
+    const stampText = pState.stamp !== undefined && pState.stamp !== ''
+      ? pState.stamp
+      : (photoEntry?.defaultStamp || '');
+    if (stampText) {
+      drawPanelLocationStamp(
+        ctx,
+        geom,
+        stampText,
+        outerFrame,
+        topReservePx,
+        mosaicBottom,
+        width,
+        base,
+        gutterPx,
+        accentColor,
+        showRoleTags,
+      );
+    }
+  }
+}
+
+function applyMosaicAtmosphere(ctx, rectX, rectY, rectW, rectH, leakX0, leakY0, leakX1, leakY1, grade, gradeStrength) {
+  const leak = ctx.createLinearGradient(leakX0, leakY0, leakX1, leakY1);
+  leak.addColorStop(0, grade.lightLeak[0]);
+  leak.addColorStop(0.5, grade.lightLeak[1]);
+  leak.addColorStop(1, grade.lightLeak[2]);
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = 0.24 * (gradeStrength ?? 0.92);
+  ctx.fillStyle = leak;
+  ctx.fillRect(rectX, rectY, rectW, rectH);
+
+  const grainCanvas = getPosterGrainCanvas();
+  const pattern = ctx.createPattern(grainCanvas, 'repeat');
+  if (pattern) {
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = pattern;
+    ctx.fillRect(rectX, rectY, rectW, rectH);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
 }
 
 export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
@@ -276,8 +461,9 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
 
   // 2) Compute multi-panel polygon geometry
   const geometries = computeLayoutGeometry(state.layoutId, width, height, outerFrame, topReservePx, bottomReservePx);
+  const heroIdx = Math.max(0, geometries.findIndex((g) => g.role === 'hero'));
   const titleSafeTopY = (pos === 'overlay-bottom' || pos === 'bottom-left')
-    ? mosaicBottom - Math.round(base * (aspect > 1.25 ? 0.275 : aspect < 0.9 ? 0.22 : 0.24))
+    ? mosaicBottom - Math.round(base * (aspect > 1.25 ? 0.302 : aspect < 0.9 ? 0.235 : 0.255))
     : mosaicBottom;
 
   // 3) Render each stylized photo clipped cleanly to its angled panel polygon
@@ -300,92 +486,14 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
     ctx.save();
     tracePolygon(ctx, geom.pts);
     ctx.clip();
-
-    if (photoEntry && photoEntry.img) {
-      const styled = runPainterlySobelInkPipeline(
-        photoEntry,
-        effectiveGradeId,
-        state.paintStrength ?? 0.72,
-        state.inkStrength ?? 0.58,
-        state.gradeStrength ?? 0.92,
-        state.halftoneStrength ?? 0.34,
-        isExport,
-      );
-      drawPanelPhoto(ctx, styled, geom.bounds, pState, photoEntry);
-    } else {
-      const pg = ctx.createLinearGradient(
-        geom.bounds.x, geom.bounds.y,
-        geom.bounds.x + geom.bounds.w, geom.bounds.y + geom.bounds.h,
-      );
-      pg.addColorStop(0, '#1B1136');
-      pg.addColorStop(1, '#36133B');
-      ctx.fillStyle = pg;
-      ctx.fillRect(geom.bounds.x, geom.bounds.y, geom.bounds.w, geom.bounds.h);
-    }
-
-    // Deep atmospheric vignette + subtle warm/neon rim-tint glaze per panel
-    const vRad = Math.max(geom.bounds.w, geom.bounds.h) * 0.72;
-    const vg = ctx.createRadialGradient(
-      geom.bounds.cx, geom.bounds.cy, vRad * 0.34,
-      geom.bounds.cx, geom.bounds.cy, vRad,
-    );
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, grade.vignetteRim || 'rgba(10, 5, 22, 0.46)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(geom.bounds.x, geom.bounds.y, geom.bounds.w, geom.bounds.h);
-
-    if (grade.rimGlow) {
-      const rg = ctx.createLinearGradient(0, geom.bounds.y, 0, geom.bounds.y + geom.bounds.h * 0.42);
-      rg.addColorStop(0, grade.rimGlow);
-      rg.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.globalCompositeOperation = 'screen';
-      ctx.fillStyle = rg;
-      ctx.fillRect(geom.bounds.x, geom.bounds.y, geom.bounds.w, geom.bounds.h * 0.42);
-    }
+    renderPanelArtwork(ctx, geom, pState, photoEntry, effectiveGradeId, state, grade, isExport);
     ctx.restore();
 
-    // 2-word Character Role Tag plaque (ON by default)
-    const showRoleTags = state.showRoleTags !== false;
-    if (showRoleTags) {
-      const roleText = pState.role !== undefined && pState.role !== ''
-        ? pState.role
-        : (photoEntry?.defaultRole || '');
-      if (roleText) {
-        const isHeroTall = geom.bounds.h > (mosaicBottom - mosaicTop) * 0.72;
-        drawPanelRoleTag(
-          ctx,
-          geom,
-          roleText,
-          mosaicTop,
-          titleSafeTopY,
-          base,
-          gutterPx,
-          grade.accentColor,
-          isHeroTall,
-        );
-      }
-    }
-
-    // Optional episodic location/time stamps (OFF by default)
-    if (state.showLocationStamps) {
-      const stampText = pState.stamp !== undefined && pState.stamp !== ''
-        ? pState.stamp
-        : (photoEntry?.defaultStamp || '');
-      if (stampText) {
-        drawPanelLocationStamp(
-          ctx,
-          geom,
-          stampText,
-          outerFrame,
-          topReservePx,
-          mosaicBottom,
-          width,
-          base,
-          gutterPx,
-          grade.accentColor,
-          showRoleTags,
-        );
-      }
+    if (i !== heroIdx) {
+      renderPanelBadges(
+        ctx, geom, pState, photoEntry, state, mosaicTop, mosaicBottom,
+        titleSafeTopY, outerFrame, topReservePx, width, base, gutterPx, grade.accentColor,
+      );
     }
   }
 
@@ -395,24 +503,7 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
   ctx.beginPath();
   ctx.rect(outerFrame, mosaicTop, width - outerFrame * 2, panelAreaH);
   ctx.clip();
-
-  const leak = ctx.createLinearGradient(0, mosaicTop, width, mosaicBottom);
-  leak.addColorStop(0, grade.lightLeak[0]);
-  leak.addColorStop(0.5, grade.lightLeak[1]);
-  leak.addColorStop(1, grade.lightLeak[2]);
-  ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = 0.24 * (state.gradeStrength ?? 0.92);
-  ctx.fillStyle = leak;
-  ctx.fillRect(outerFrame, mosaicTop, width - outerFrame * 2, panelAreaH);
-
-  const grainCanvas = getPosterGrainCanvas();
-  const pattern = ctx.createPattern(grainCanvas, 'repeat');
-  if (pattern) {
-    ctx.globalCompositeOperation = 'overlay';
-    ctx.globalAlpha = 0.22;
-    ctx.fillStyle = pattern;
-    ctx.fillRect(outerFrame, mosaicTop, width - outerFrame * 2, panelAreaH);
-  }
+  applyMosaicAtmosphere(ctx, outerFrame, mosaicTop, width - outerFrame * 2, panelAreaH, 0, mosaicTop, width, mosaicBottom, grade, state.gradeStrength);
   ctx.restore();
 
   // 5) Draw Twilight-Gold / Cream / White / Black panel dividers
@@ -428,6 +519,92 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
       grade.accentColor,
       base,
     );
+  }
+
+  // 5b) Elevated 3D Hero Card Pop-Out over adjacent panel gutters
+  if (geometries[heroIdx]) {
+    const heroGeom = geometries[heroIdx];
+    const heroState = state.panels[heroIdx] || {};
+    const heroPhoto = photoMap.get(heroState.photoId) || [...photoMap.values()][0];
+    const heroGradeId = heroState.gradeOverride || state.gradeId;
+    const popPx = Math.max(5, Math.round(gutterPx * 0.62));
+    const elevatedGeom = expandHeroGeometry(heroGeom, popPx, outerFrame, mosaicTop, width - outerFrame, mosaicBottom);
+    const heroRimColor = (state.gradeId === 'midnight-neon' && aspect < 0.92) ? '#96F7FF' : '#FFE9B8';
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(outerFrame, mosaicTop, width - outerFrame * 2, panelAreaH);
+    ctx.clip();
+
+    // Deep cast drop shadow onto adjacent panels (wide ambient + crisp contact shadow)
+    ctx.save();
+    tracePolygon(ctx, elevatedGeom.pts);
+    ctx.shadowColor = 'rgba(3, 1, 10, 0.88)';
+    ctx.shadowBlur = Math.max(24, Math.round(base * 0.032));
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = Math.round(base * 0.008);
+    ctx.fillStyle = '#07040E';
+    ctx.fill();
+
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.92)';
+    ctx.shadowBlur = Math.max(10, Math.round(base * 0.012));
+    ctx.shadowOffsetY = Math.round(base * 0.004);
+    ctx.fill();
+    ctx.restore();
+
+    // Clipped hero artwork + matched poster glaze + hairline inner black keyline
+    ctx.save();
+    tracePolygon(ctx, elevatedGeom.pts);
+    ctx.clip();
+    renderPanelArtwork(ctx, elevatedGeom, heroState, heroPhoto, heroGradeId, state, grade, isExport);
+    applyMosaicAtmosphere(
+      ctx,
+      elevatedGeom.bounds.x,
+      elevatedGeom.bounds.y,
+      elevatedGeom.bounds.w,
+      elevatedGeom.bounds.h,
+      0,
+      mosaicTop,
+      width,
+      mosaicBottom,
+      grade,
+      state.gradeStrength,
+    );
+
+    ctx.lineJoin = 'miter';
+    ctx.lineWidth = Math.max(2.0, base * 0.0022);
+    ctx.strokeStyle = '#07040E';
+    ctx.stroke();
+
+    if (showSelection && heroIdx === state.selectedPanel) {
+      ctx.lineWidth = Math.max(7, gutterPx * 0.72);
+      ctx.strokeStyle = grade.accentColor;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Heavy matte black comic frame + metallic rim keyline
+    ctx.save();
+    tracePolygon(ctx, elevatedGeom.pts);
+    ctx.lineJoin = 'miter';
+    ctx.lineWidth = Math.max(7, Math.round(base * 0.0082));
+    ctx.strokeStyle = '#07040E';
+    ctx.stroke();
+
+    ctx.lineWidth = Math.max(2.6, Math.round(base * 0.0030));
+    ctx.strokeStyle = heroRimColor;
+    ctx.shadowColor = heroRimColor;
+    ctx.shadowBlur = state.gradeId === 'midnight-neon' ? Math.round(base * 0.010) : Math.round(base * 0.005);
+    ctx.stroke();
+    ctx.restore();
+
+    // Redraw hero Role Tag cleanly on top of the elevated card
+    const heroTitleSafeTopY = titleSafeTopY - Math.round(base * 0.014);
+    renderPanelBadges(
+      ctx, elevatedGeom, heroState, heroPhoto, state, mosaicTop, mosaicBottom,
+      heroTitleSafeTopY, outerFrame, topReservePx, width, base, gutterPx, grade.accentColor,
+    );
+    ctx.restore();
   }
 
   // 6) Outer frame + razor-sharp champagne-gold / collector edge border

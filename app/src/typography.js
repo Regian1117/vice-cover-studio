@@ -82,6 +82,15 @@ function drawPalmSilhouette(ctx, baseX, baseY, heightPx, leanPx, scaleX) {
   ctx.restore();
 }
 
+function traceSlantedPill(ctx, x, y, w, h, skew) {
+  ctx.beginPath();
+  ctx.moveTo(x + skew, y);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x + w - skew, y + h);
+  ctx.lineTo(x, y + h);
+  ctx.closePath();
+}
+
 // Top Cinematic Press Header Bar (clean edge-to-edge header clear of all photos)
 export function renderTopPressHeaderBar(ctx, width, outerFrame, topHeaderH, state, grade, borderStyle) {
   if (!topHeaderH || topHeaderH <= 0) return;
@@ -112,35 +121,59 @@ export function renderTopPressHeaderBar(ctx, width, outerFrame, topHeaderH, stat
   const padSide = Math.round(hw * 0.016);
   let rightUsedW = padSide;
 
-  // Optional right-side collector pill inside the top header bar (at most 1 clean badge)
+  // Optional right-side collector pill + edition pill inside the top header bar
   const badgeClean = (state.badge || '').trim().toUpperCase();
-  if (badgeClean) {
+  const edClean = (state.editionPill || '').trim().toUpperCase();
+  if (badgeClean || edClean) {
     const bfs = Math.max(12, Math.round(contentH * 0.50));
-    ctx.font = `700 ${bfs}px "Bebas Neue", sans-serif`;
-    const bTrack = Math.round(bfs * 0.08);
-    const bw = measureTextTracked(ctx, badgeClean, bTrack) + Math.round(bfs * 1.15);
     const bh = Math.round(contentH * 0.68);
-    const bx = hx + hw - padSide - bw;
     const by = cy - bh * 0.5;
-    const skew = 6;
+    const pillGap = Math.round(bfs * 0.48);
+    let cursorRightX = hx + hw - padSide;
 
-    ctx.beginPath();
-    ctx.moveTo(bx + skew, by);
-    ctx.lineTo(bx + bw, by);
-    ctx.lineTo(bx + bw - skew, by + bh);
-    ctx.lineTo(bx, by + bh);
-    ctx.closePath();
-    ctx.fillStyle = grade.badgeBg;
-    ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = divColor;
-    ctx.stroke();
+    if (badgeClean) {
+      ctx.font = `700 ${bfs}px "Bebas Neue", sans-serif`;
+      const bTrack = Math.round(bfs * 0.08);
+      const bw = measureTextTracked(ctx, badgeClean, bTrack) + Math.round(bfs * 1.15);
+      const bx = cursorRightX - bw;
 
-    ctx.fillStyle = grade.badgeFg;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    drawTextTracked(ctx, badgeClean, bx + bw * 0.5, by + bh * 0.54, bTrack, 'fill');
-    rightUsedW += bw + Math.round(bfs * 0.8);
+      traceSlantedPill(ctx, bx, by, bw, bh, 6);
+      ctx.fillStyle = grade.badgeBg;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = divColor;
+      ctx.stroke();
+
+      ctx.fillStyle = grade.badgeFg;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      drawTextTracked(ctx, badgeClean, bx + bw * 0.5, by + bh * 0.54, bTrack, 'fill');
+
+      cursorRightX = bx - pillGap;
+      rightUsedW += bw + Math.round(bfs * 0.8);
+    }
+
+    if (edClean) {
+      const efs = Math.max(11, Math.round(contentH * 0.44));
+      ctx.font = `700 ${efs}px "Bebas Neue", sans-serif`;
+      const eTrack = Math.round(efs * 0.08);
+      const ew = measureTextTracked(ctx, edClean, eTrack) + Math.round(efs * 1.12);
+      const ex = cursorRightX - ew;
+
+      traceSlantedPill(ctx, ex, by, ew, bh, 5);
+      ctx.fillStyle = 'rgba(12, 7, 24, 0.94)';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = grade.badgeBg;
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFF8EB';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      drawTextTracked(ctx, edClean, ex + ew * 0.5, by + bh * 0.54, eTrack, 'fill');
+
+      rightUsedW += ew + (badgeClean ? pillGap : Math.round(efs * 0.8));
+    }
   } else if (state.showHeatStars && (state.heatStars ?? 0) > 0) {
     const hfs = Math.max(12, Math.round(contentH * 0.46));
     const heatTxt = `HEAT ${'★'.repeat(Math.min(5, state.heatStars))}`;
@@ -362,15 +395,14 @@ export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH,
   const bx = fx + fw - padSide - barW;
   const showSideItems = fw >= 640;
   const tagX = fx + fw * 0.5;
-  const tagY = contentTop + contentH * 0.37;
-  const creditBlockY = contentTop + contentH * 0.77;
+  const tagY = contentTop + contentH * 0.52;
   let tagLeftBound = tagX;
 
   if (taglineText) {
-    let tagSize = Math.max(13, Math.round(fh * 0.34));
-    let tagTracking = Math.round(tagSize * 0.15);
+    let tagSize = Math.max(15, Math.round(fh * 0.42));
+    let tagTracking = Math.round(tagSize * 0.14);
     const maxTagHalfW = showSideItems
-      ? (bx - tagX) - Math.round(fw * 0.03)
+      ? Math.min(bx - tagX - Math.round(fw * 0.025), tagX - (fx + padSide) - Math.round(fw * 0.19))
       : fw * 0.44;
     ctx.font = `700 ${tagSize}px "Bebas Neue", sans-serif`;
     let tagW = measureTextTracked(ctx, taglineText, tagTracking);
@@ -407,35 +439,18 @@ export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH,
     drawTextTracked(ctx, taglineText, tagX, tagY, tagTracking, 'fill');
   }
 
-  const billingSize = Math.max(8, Math.round(fh * 0.145));
-  const billingTracking = Math.round(billingSize * 0.09);
-  ctx.font = `600 ${billingSize}px "Barlow", sans-serif`;
-  const maxBillW = showSideItems ? (bx - fx - padSide * 3) * 0.62 : fw * 0.88;
-  const billingOptions = [
-    'ORIGINAL MULTI-PANEL ARTWORK · PAINTERLY SOBEL INK ENGINE · OFFLINE COLLECTOR PRINT',
-    'ORIGINAL MULTI-PANEL ARTWORK · PAINTERLY INK ENGINE · COLLECTOR PRINT',
-    'ORIGINAL MULTI-PANEL COLLECTOR PRINT EDITION',
-  ];
-  const billingText = billingOptions.find((t) => measureTextTracked(ctx, t, billingTracking) <= maxBillW);
-  if (billingText) {
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.lineWidth = Math.max(2.5, Math.round(billingSize * 0.28));
-    ctx.strokeStyle = '#07040E';
-    drawTextTracked(ctx, billingText, tagX, creditBlockY, billingTracking, 'stroke');
-    ctx.fillStyle = 'rgba(246, 241, 231, 0.90)';
-    drawTextTracked(ctx, billingText, tagX, creditBlockY, billingTracking, 'fill');
-  }
-
   if (showSideItems) {
-    const creditSize = Math.max(10, Math.round(fh * 0.20));
-    const creditTrack = Math.round(creditSize * 0.08);
+    let creditSize = Math.max(12, Math.round(fh * 0.27));
+    let creditTrack = Math.round(creditSize * 0.08);
+    const leftAvail = tagLeftBound - (fx + padSide) - Math.round(fw * 0.018);
+    const leftLabel = 'ORIGINAL ART PRINT';
     ctx.font = `700 ${creditSize}px "Bebas Neue", sans-serif`;
-    const leftAvail = tagLeftBound - (fx + padSide) - Math.round(fw * 0.02);
-    const leftLabel = ['ORIGINAL ART PRINT', 'ORIGINAL ART'].find(
-      (txt) => measureTextTracked(ctx, txt, creditTrack) <= leftAvail,
-    );
-    if (leftLabel) {
+    while (measureTextTracked(ctx, leftLabel, creditTrack) > leftAvail && creditSize > 9) {
+      creditSize -= 1;
+      creditTrack = Math.round(creditSize * 0.06);
+      ctx.font = `700 ${creditSize}px "Bebas Neue", sans-serif`;
+    }
+    if (measureTextTracked(ctx, leftLabel, creditTrack) <= leftAvail + 4) {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.lineWidth = Math.max(3, Math.round(creditSize * 0.25));
@@ -879,8 +894,8 @@ export function renderCoverTypographyAndBadges(
   }
 
   // 4) Giant Striped Retro-Chrome 3D Display Typography + Lens Stars + Neon Script + Tagline Pill + Gold Seal
-  const sealR = Math.round(base * (aspect > 1.25 ? 0.068 : 0.063));
-  let sealX = width - outerFrame - sealR - Math.round(width * 0.022);
+  const sealR = Math.round(base * (horizonBandH > 0 ? (aspect > 1.25 ? 0.060 : 0.056) : (aspect > 1.25 ? 0.060 : 0.062)));
+  let sealX = width - outerFrame - sealR - Math.round(width * 0.016);
   let sealY = mosaicBottom - Math.round(base * 0.25);
 
   if (titleText || scriptText) {
@@ -888,9 +903,9 @@ export function renderCoverTypographyAndBadges(
     const isHorizonOrDocked = horizonBandH > 0 || dockedTitleH > 0;
     const hasSubPill = Boolean(subTaglineText);
 
-    const maxTextW = isFullBleedOverlay
-      ? (width - outerFrame * 2) * (aspect > 1.25 ? 0.85 : 0.89)
-      : (width - outerFrame * 2) * 0.86;
+    const innerW = width - outerFrame * 2;
+    const widthFrac = aspect > 1.25 ? 0.815 : aspect < 0.90 ? 0.86 : 0.83;
+    const maxTextW = innerW * widthFrac;
 
     let titleSize = Math.round(
       horizonBandH > 0
@@ -905,14 +920,14 @@ export function renderCoverTypographyAndBadges(
     if (titleText) {
       let measured = measureTextTracked(ctx, titleText, Math.round(titleSize * 0.024));
       while (measured > maxTextW && titleSize > 48) {
-        titleSize -= 4;
+        titleSize -= 2;
         ctx.font = `400 ${titleSize}px "Anton", Impact, sans-serif`;
         measured = measureTextTracked(ctx, titleText, Math.round(titleSize * 0.024));
       }
     }
     const finalTracking = Math.round(titleSize * 0.024);
     const titleW = titleText ? measureTextTracked(ctx, titleText, finalTracking) : 0;
-    const scriptSize = Math.round(titleSize * (horizonBandH > 0 ? 0.34 : 0.35));
+    let scriptSize = Math.round(titleSize * (horizonBandH > 0 ? 0.34 : 0.35));
 
     let anchorX = width * 0.5;
     let textAlign = 'center';
@@ -921,7 +936,7 @@ export function renderCoverTypographyAndBadges(
 
     if (horizonBandH > 0) {
       anchorX = width * 0.5;
-      titleY = stageTop + Math.round(horizonBandH * 0.64);
+      titleY = stageTop + Math.round(horizonBandH * 0.61);
     } else if (dockedTitleH > 0) {
       anchorX = width * 0.5;
       titleY = stageTop + Math.round(dockedTitleH * 0.68);
@@ -955,9 +970,9 @@ export function renderCoverTypographyAndBadges(
 
     // Position large Gold Sunburst Seal cleanly above tilted right edge without overlapping any glyph
     const rightTiltLift = titleW * (textAlign === 'center' ? 0.024 : 0.044);
-    const sealClearTop = titleY - titleSize * 0.84 - rightTiltLift - sealR * 0.88;
+    const sealClearTop = titleY - titleSize * 0.84 - rightTiltLift - sealR * 0.72;
     if (horizonBandH > 0) {
-      sealY = Math.min(stageTop - Math.round(sealR * 0.45), sealClearTop);
+      sealY = Math.min(stageTop - Math.round(sealR * 1.18), sealClearTop);
     } else if (dockedTitleH > 0) {
       sealY = stageTop + Math.round(dockedTitleH * 0.14);
     } else if (pos === 'top-banner') {
@@ -988,9 +1003,9 @@ export function renderCoverTypographyAndBadges(
       const extrudeX = titleSize * 0.0112;
       const extrudeY = titleSize * 0.0138;
 
-      // A) Deep 3D violet-black extrusion
+      // A) Deep 3D obsidian-plum extrusion
       for (let s = extrudeSteps; s >= 1; s--) {
-        const shade = s > 9 ? '#2B0B4A' : '#07030F';
+        const shade = s > 10 ? '#24093E' : s > 5 ? '#120522' : '#06020C';
         ctx.fillStyle = shade;
         ctx.strokeStyle = shade;
         ctx.lineWidth = strokeW;
@@ -1007,12 +1022,12 @@ export function renderCoverTypographyAndBadges(
         ctx.shadowBlur = 0;
       }
 
-      // B) Warm champagne-gold outer rim + heavy matte black comic keyline
-      ctx.strokeStyle = 'rgba(245, 230, 200, 0.82)';
-      ctx.lineWidth = strokeW * 1.08;
+      // B) Warm champagne-gold outer contour + heavy matte black comic keyline
+      ctx.strokeStyle = '#FFF6D6';
+      ctx.lineWidth = strokeW * 1.14;
       drawTextTracked(ctx, titleText, anchorX, titleY, finalTracking, 'stroke');
 
-      ctx.strokeStyle = '#08050E';
+      ctx.strokeStyle = '#07040D';
       ctx.lineWidth = strokeW;
       drawTextTracked(ctx, titleText, anchorX, titleY, finalTracking, 'stroke');
 
@@ -1099,8 +1114,8 @@ export function renderCoverTypographyAndBadges(
 
       // Upper chrome specular sheen
       const sheenGrad = lctx.createLinearGradient(0, localY - titleSize * 0.88, 0, localY - titleSize * 0.44);
-      sheenGrad.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
-      sheenGrad.addColorStop(0.85, 'rgba(255, 255, 255, 0.14)');
+      sheenGrad.addColorStop(0, 'rgba(255, 255, 255, 0.72)');
+      sheenGrad.addColorStop(0.85, 'rgba(255, 255, 255, 0.18)');
       sheenGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
       lctx.fillStyle = sheenGrad;
       lctx.fillRect(0, 0, width, bandH);
@@ -1124,8 +1139,21 @@ export function renderCoverTypographyAndBadges(
     // 5) Glowing Neon Brush Script directly under right half of giant 3D title
     if (scriptText) {
       ctx.save();
+      const maxScriptW = innerW * 0.58;
+      ctx.font = `400 ${scriptSize}px "Yellowtail", cursive`;
+      let scriptW = ctx.measureText(scriptText).width;
+      while (scriptW > maxScriptW && scriptSize > 18) {
+        scriptSize -= 2;
+        ctx.font = `400 ${scriptSize}px "Yellowtail", cursive`;
+        scriptW = ctx.measureText(scriptText).width;
+      }
+
+      const scriptPad = Math.round(base * 0.025);
       let sx = textAlign === 'center' ? anchorX + titleW * 0.24 : anchorX + titleW * 0.48;
-      sx = Math.min(sx, width - outerFrame - Math.round(width * 0.16));
+      sx = Math.max(
+        outerFrame + scriptW * 0.52 + scriptPad,
+        Math.min(sx, width - outerFrame - scriptW * 0.52 - scriptPad),
+      );
       const rawSy = titleY + Math.round(titleSize * 0.06);
       const zoneBottom = isHorizonOrDocked ? stageBottom : mosaicBottom;
       const maxSy = zoneBottom - Math.round(scriptSize * 0.68);
@@ -1133,12 +1161,10 @@ export function renderCoverTypographyAndBadges(
 
       ctx.translate(sx, sy);
       ctx.rotate((-4.2 * Math.PI) / 180);
-      ctx.font = `400 ${scriptSize}px "Yellowtail", cursive`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.lineJoin = 'round';
 
-      const scriptW = ctx.measureText(scriptText).width;
       const swX0 = -scriptW * 0.44;
       const swX1 = scriptW * 0.46;
       const swY0 = scriptSize * 0.44;

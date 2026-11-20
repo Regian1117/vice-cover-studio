@@ -1,6 +1,6 @@
-// Vice Cover Studio v3 — Multi-Panel Cover Art Maker (Offline Canvas 2D + Painterly Sobel Ink Pipeline)
-// Core features: 8 slanted multi-panel layouts, Twilight Gold / Cream / White / Black borders, per-panel crop/pan/zoom/rotate/flip/roles,
-// 6 harmonized color grades + halftone grain, layered striped retro-chrome 3D typography, top press bar, gold sunburst seal & 3-size PNG export.
+// Vice Cover Studio v4 — Multi-Panel Cover Art Maker (Offline Canvas 2D + Painterly Sobel Ink Pipeline)
+// Core features: 8 slanted multi-panel layouts including 7-Panel Center Hero, 3D elevated hero pop-out & cut-paper depth,
+// smart 1-photo multi-crop auto-fill, 6 harmonized color grades, retro-chrome 3D typography, and 3-size PNG export.
 
 import { EXPORT_SIZES, MULTI_PANEL_LAYOUTS, getLayoutById, hitTestPanel, getSmartSinglePhotoTransform } from './layouts.js';
 import { VICE_COLOR_GRADES, PANEL_BORDER_STYLES, QUICK_PRESETS, getGradeById } from './grades.js';
@@ -17,10 +17,11 @@ let lastGeometries = [];
 let renderScheduled = false;
 let dragState = null;
 let inputUndoTimer = null;
+let studioBooted = false;
 
 export const studioState = {
   sizeId: 'landscape',
-  layoutId: 'hero-slant-6',
+  layoutId: 'center-hero-7',
   gradeId: 'vice-sunset',
   borderStyle: 'twilight-gold',
   presetId: 'sunset-gold',
@@ -31,10 +32,10 @@ export const studioState = {
   title: 'PALM HORIZON',
   script: 'Sunset Syndicate',
   pressQuote: '★★★★★ "PURE GOLDEN-HOUR ADRENALINE" — COASTAL WEEKLY',
-  subTagline: 'FIVE STRANGERS · ONE COAST · NO WAY BACK',
+  subTagline: 'SEVEN STORIES · ONE COAST · NO WAY BACK',
   tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA',
   badge: 'VOL. 06',
-  editionPill: '',
+  editionPill: 'COMING SOON',
   titleStyle: 'sunset-extrude',
   titlePosition: 'overlay-bottom',
   showRoleTags: true,
@@ -53,6 +54,8 @@ export const studioState = {
     panY: 0,
     rotation: 0,
     flipH: false,
+    cropFocalX: null,
+    cropFocalY: null,
     gradeOverride: '',
     role: '',
     stamp: '',
@@ -92,7 +95,7 @@ export async function uploadUserPhotos(files, mode = 'multi') {
   if (!uploadedIds.length) return uploadedIds;
   if (mode === 'panel') {
     updatePanelCropPanZoom(studioState.selectedPanel, {
-      photoId: uploadedIds[0], zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, role: '', stamp: '',
+      photoId: uploadedIds[0], zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, cropFocalX: null, cropFocalY: null, role: '', stamp: '',
     });
     renderPhotoLibraryTray();
   } else if (mode === 'single' || uploadedIds.length === 1) {
@@ -105,13 +108,20 @@ export async function uploadUserPhotos(files, mode = 'multi') {
   return uploadedIds;
 }
 
+const SMART_CONTRAST_GRADES = ['vice-sunset', 'tropical-cyan', 'vice-noir', 'midnight-neon', 'synth-chrome', 'golden-heatwave'];
+
 export function fillAllPanelsFromPhoto(photoId) {
   const layout = getLayoutById(studioState.layoutId);
   const spec = getSizeSpec();
   const defs = layout.getPanels(spec.width / spec.height);
+  const contrastingGrades = SMART_CONTRAST_GRADES.filter((id) => id !== studioState.gradeId);
+
   for (let i = 0; i < studioState.panels.length; i++) {
     const role = defs[i]?.role || 'detail';
     const smart = getSmartSinglePhotoTransform(i, role);
+    const gradeOverride = i === 0
+      ? ''
+      : (contrastingGrades[(i - 1) % contrastingGrades.length] || smart.preferredGrade || '');
     studioState.panels[i] = {
       photoId,
       zoom: smart.zoom,
@@ -119,8 +129,10 @@ export function fillAllPanelsFromPhoto(photoId) {
       panY: smart.panY,
       rotation: smart.rotation,
       flipH: smart.flipH,
-      gradeOverride: '',
-      role: '',
+      cropFocalX: smart.cropFocalX ?? null,
+      cropFocalY: smart.cropFocalY ?? null,
+      gradeOverride,
+      role: smart.label || '',
       stamp: '',
     };
   }
@@ -185,6 +197,9 @@ export function renderLiveCoverCanvas() {
       showSelection: !isCoverShot,
     });
     syncPanelInspectorUI();
+    if (studioBooted && window.__viceCoverStudio) {
+      window.__viceCoverStudio.ready = true;
+    }
   });
 }
 
@@ -231,6 +246,7 @@ function bindStudioDom() {
     pressQuote: 'press-quote-input',
     subTagline: 'sub-tagline-input',
     cornerBadge: 'corner-badge-input',
+    editionPillInput: 'edition-pill-input',
     titleStyle: 'title-style-select',
     titlePos: 'title-position-select',
     toggleRoles: 'toggle-role-tags',
@@ -443,7 +459,7 @@ function renderPhotoLibraryTray() {
     btn.appendChild(img);
     btn.addEventListener('click', () => {
       updatePanelCropPanZoom(studioState.selectedPanel, {
-        photoId: entry.id, zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, role: '', stamp: '',
+        photoId: entry.id, zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, cropFocalX: null, cropFocalY: null, role: '', stamp: '',
       });
       renderPhotoLibraryTray();
       recordHistory();
@@ -485,6 +501,7 @@ function syncTypographyInputs() {
   dom.pressQuote.value = studioState.pressQuote;
   if (dom.subTagline) dom.subTagline.value = studioState.subTagline || '';
   dom.cornerBadge.value = studioState.badge;
+  if (dom.editionPillInput) dom.editionPillInput.value = studioState.editionPill || '';
   dom.titleStyle.value = studioState.titleStyle;
   dom.titlePos.value = studioState.titlePosition;
   if (dom.toggleRoles) dom.toggleRoles.checked = studioState.showRoleTags !== false;
@@ -513,6 +530,8 @@ function distributePhotosAcrossPanels(photoIds, roles = []) {
       panY: isRepeat ? 0.08 : 0,
       rotation: 0,
       flipH: isRepeat,
+      cropFocalX: null,
+      cropFocalY: null,
       gradeOverride: '',
       role: roles[i] || '',
       stamp: isRepeat ? 'MIDNIGHT GARAGE · 10:15 PM' : '',
@@ -766,7 +785,7 @@ function wireInteractions() {
 
   document.getElementById('reset-panel-crop-btn').addEventListener('click', () => {
     updatePanelCropPanZoom(studioState.selectedPanel, {
-      zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, gradeOverride: '', role: '', stamp: '',
+      zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, cropFocalX: null, cropFocalY: null, gradeOverride: '', role: '', stamp: '',
     });
     recordHistory();
   });
@@ -811,6 +830,9 @@ function wireInteractions() {
     dom.subTagline.addEventListener('input', () => { studioState.subTagline = dom.subTagline.value; renderLiveCoverCanvas(); scheduleDebouncedHistory(); });
   }
   dom.cornerBadge.addEventListener('input', () => { studioState.badge = dom.cornerBadge.value; renderLiveCoverCanvas(); scheduleDebouncedHistory(); });
+  if (dom.editionPillInput) {
+    dom.editionPillInput.addEventListener('input', () => { studioState.editionPill = dom.editionPillInput.value; renderLiveCoverCanvas(); scheduleDebouncedHistory(); });
+  }
   dom.titleStyle.addEventListener('change', () => { studioState.titleStyle = dom.titleStyle.value; renderLiveCoverCanvas(); recordHistory(); });
   dom.titlePos.addEventListener('change', () => { studioState.titlePosition = dom.titlePos.value; renderLiveCoverCanvas(); recordHistory(); });
   if (dom.toggleRoles) {
@@ -926,7 +948,7 @@ function wireInteractions() {
       updatePanelCropPanZoom(studioState.selectedPanel, { flipH: !studioState.panels[studioState.selectedPanel].flipH });
       recordHistory();
     } else if (e.key.toLowerCase() === 'r') {
-      updatePanelCropPanZoom(studioState.selectedPanel, { zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false });
+      updatePanelCropPanZoom(studioState.selectedPanel, { zoom: 1.05, panX: 0, panY: 0, rotation: 0, flipH: false, cropFocalX: null, cropFocalY: null });
       recordHistory();
     }
   });
@@ -974,11 +996,25 @@ function applyQueryOverrides() {
   const photosParam = params.get('photos');
   if (photosParam) {
     const list = photosParam.split(',').filter((id) => photoMap.has(id));
-    if (list.length === 1) fillAllPanelsFromPhoto(list[0]);
-    else if (list.length > 1) distributePhotosAcrossPanels(list, rolesList);
+    if (list.length === 1) {
+      fillAllPanelsFromPhoto(list[0]);
+      for (let i = 0; i < studioState.panels.length && i < rolesList.length; i++) {
+        if (rolesList[i]) studioState.panels[i].role = rolesList[i];
+      }
+    } else if (list.length > 1) {
+      distributePhotosAcrossPanels(list, rolesList);
+    }
   } else if (rolesList.length) {
     for (let i = 0; i < studioState.panels.length && i < rolesList.length; i++) {
       if (rolesList[i]) studioState.panels[i].role = rolesList[i];
+    }
+  }
+
+  if (params.has('selectedPanel')) {
+    const reqIdx = Number(params.get('selectedPanel'));
+    const maxCount = getLayoutById(studioState.layoutId).panelCount;
+    if (Number.isInteger(reqIdx) && reqIdx >= 0 && reqIdx < maxCount) {
+      studioState.selectedPanel = reqIdx;
     }
   }
 
@@ -1000,6 +1036,16 @@ async function bootStudio() {
   renderStaticControls();
   wireInteractions();
 
+  window.__viceCoverStudio = {
+    ready: false,
+    exportDataUrl(sizeId) {
+      const spec = getSizeSpec(sizeId || studioState.sizeId);
+      const off = renderExportCanvas(studioState, photoMap, spec.width, spec.height);
+      return off.toDataURL('image/png');
+    },
+    getState: () => ({ ...studioState }),
+  };
+
   if (document.fonts && document.fonts.ready) {
     await document.fonts.ready;
   }
@@ -1010,17 +1056,43 @@ async function bootStudio() {
   const heroOrder = [
     'boulevard',
     'pier-candid',
-    'protagonist-dusk',
-    'supercar',
     'neon-motel-rider',
-    'coast-aerial',
+    'supercar',
+    'protagonist-dusk',
     'neon-strip',
+    'coast-aerial',
     'yacht-chase',
   ].filter((id) => photoMap.has(id));
-  distributePhotosAcrossPanels(heroOrder.length ? heroOrder : [...photoMap.keys()]);
+  const defaultHeroRoles = [
+    'THE DRIVER · 6:42 PM',
+    'THE ANGLER · 5:15 PM',
+    'THE RIDER',
+    'THE GETAWAY',
+    'THE INSIDER · 8:30 PM',
+    'THE STRIP',
+    'THE COURIER',
+  ];
+  distributePhotosAcrossPanels(heroOrder.length ? heroOrder : [...photoMap.keys()], defaultHeroRoles);
 
   applyQueryOverrides();
-  if (studioState.layoutId === 'hero-slant-6' && studioState.sizeId === 'landscape') {
+  if (studioState.layoutId === 'center-hero-7' && studioState.sizeId === 'landscape') {
+    if (studioState.panels[2]?.photoId === 'neon-motel-rider') {
+      studioState.panels[2].zoom = 1.26;
+      studioState.panels[2].panY = -0.20;
+    }
+    if (studioState.panels[3]?.photoId === 'supercar') {
+      studioState.panels[3].zoom = 1.32;
+      studioState.panels[3].panY = -0.24;
+    }
+    if (studioState.panels[5]?.photoId === 'neon-strip') {
+      studioState.panels[5].zoom = 1.26;
+      studioState.panels[5].panY = -0.20;
+    }
+    if (studioState.panels[6]?.photoId === 'coast-aerial') {
+      studioState.panels[6].zoom = 1.24;
+      studioState.panels[6].panY = -0.18;
+    }
+  } else if (studioState.layoutId === 'hero-slant-6' && studioState.sizeId === 'landscape') {
     if (studioState.panels[3]?.photoId === 'supercar') {
       studioState.panels[3].panY = -0.16;
       studioState.panels[3].zoom = 1.08;
@@ -1073,17 +1145,9 @@ async function bootStudio() {
       studioState.panels[5].zoom = 1.04;
     }
   }
+  studioBooted = true;
   recordHistory(true);
   renderLiveCoverCanvas();
-
-  window.__viceCoverStudio = {
-    exportDataUrl(sizeId) {
-      const spec = getSizeSpec(sizeId || studioState.sizeId);
-      const off = renderExportCanvas(studioState, photoMap, spec.width, spec.height);
-      return off.toDataURL('image/png');
-    },
-    getState: () => ({ ...studioState }),
-  };
 
   setStatus('Offline · 100% local');
 }

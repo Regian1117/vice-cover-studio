@@ -4,16 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vice Cover Studio — Multi-Panel GTA 6 Cover Art Maker</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
   <div id="vice-cover-studio-app" class="studio-shell">
     <header id="studio-topbar" class="topbar">
       <div class="brand">
-        <svg class="brand-mark" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <svg class="brand-mark" width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <rect x="2" y="2" width="20" height="20" rx="4" stroke="url(#vcs-brand-grad)" stroke-width="2.2"/>
-          <path d="M11.5 2L9.2 22M10.4 11.5L22 10" stroke="#F6F1E7" stroke-width="2"/>
-          <rect x="3" y="3" width="7.2" height="18" fill="url(#vcs-brand-grad)" fill-opacity="0.38"/>
+          <path d="M9 2L7.5 22M16.5 2L15 22M2 10.5L8.4 9.8M15.8 9.8L22 10.5" stroke="#F6F1E7" stroke-width="1.8"/>
+          <rect x="8.5" y="2.8" width="7" height="18.4" fill="url(#vcs-brand-grad)" fill-opacity="0.45"/>
           <defs>
             <linearGradient id="vcs-brand-grad" x1="2" y1="2" x2="22" y2="22">
               <stop offset="0%" stop-color="#FFC845"/>
@@ -25,42 +26,15 @@
         <span class="brand-name">Vice Cover Studio</span>
       </div>
 
-      <div class="topbar-center">
-        <div id="post-size-selector" class="size-pill-group" role="group" aria-label="Post export sizes">
-          <button id="post-size-1920x1080" class="size-btn active" type="button" data-size="landscape">1920 × 1080</button>
-          <button id="post-size-1080x1350" class="size-btn" type="button" data-size="portrait">1080 × 1350</button>
-          <button id="post-size-1080x1080" class="size-btn" type="button" data-size="square">1080 × 1080</button>
-        </div>
-
-        <div class="history-group" role="group" aria-label="Undo, redo and randomize">
-          <button id="undo-history-btn" class="btn-tool" type="button" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M9 14L4 9l5-5"/>
-              <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
-            </svg>
-          </button>
-          <button id="redo-history-btn" class="btn-tool" type="button" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M15 14l5-5-5-5"/>
-              <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>
-            </svg>
-          </button>
-          <button id="surprise-cover-btn" class="btn-surprise" type="button" title="Randomize layout, grade, title & photos">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="16 3 21 3 21 8"/>
-              <line x1="4" y1="20" x2="21" y2="3"/>
-              <polyline points="21 16 21 21 16 21"/>
-              <line x1="15" y1="15" x2="21" y2="21"/>
-              <line x1="4" y1="4" x2="9" y2="9"/>
-            </svg>
-            <span>Surprise</span>
-          </button>
-        </div>
+      <div id="post-size-selector" class="size-pill-group" role="group" aria-label="Post export sizes">
+        <button id="post-size-1920x1080" class="size-btn active" type="button" data-size="landscape">1920 × 1080</button>
+        <button id="post-size-1080x1350" class="size-btn" type="button" data-size="portrait">1080 × 1350</button>
+        <button id="post-size-1080x1080" class="size-btn" type="button" data-size="square">1080 × 1080</button>
       </div>
 
       <div class="topbar-actions">
         <button id="export-png-btn" class="btn-export-cta" type="button">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
@@ -74,8 +48,53 @@
     </header>
 
     <div class="workspace">
-      <!-- Left Rail: User Photos, 8-Sample Library, Fill All Panels & Panel Crop/Zoom/Position -->
-      <aside class="rail rail-left" aria-label="Photos and panel framing">
+      <!-- Zone 1 (~62%): Bright-Contrast Live Cover Preview Stage -->
+      <main class="stage" aria-label="Live cover art preview">
+        <div id="canvas-stage-frame" class="stage-frame">
+          <canvas id="cover-preview-canvas" width="1280" height="720" aria-label="Interactive Vice Cover Studio canvas"></canvas>
+          <div id="canvas-drop-overlay" class="drop-overlay" hidden>
+            <span>Drop photo onto panel</span>
+          </div>
+        </div>
+
+        <div class="stage-bar">
+          <div class="stage-bar-row">
+            <div id="quick-preset-bar" class="preset-bar" role="group" aria-label="Cover theme presets"></div>
+            <div class="history-group" role="group" aria-label="Undo, redo and randomize">
+              <button id="undo-history-btn" class="btn-tool" type="button" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9 14L4 9l5-5"/>
+                  <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
+                </svg>
+              </button>
+              <button id="redo-history-btn" class="btn-tool" type="button" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M15 14l5-5-5-5"/>
+                  <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>
+                </svg>
+              </button>
+              <button id="surprise-cover-btn" class="btn-surprise" type="button" title="Randomize layout, grade, title & photos">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="16 3 21 3 21 8"/>
+                  <line x1="4" y1="20" x2="21" y2="3"/>
+                  <polyline points="21 16 21 21 16 21"/>
+                  <line x1="15" y1="15" x2="21" y2="21"/>
+                  <line x1="4" y1="4" x2="9" y2="9"/>
+                </svg>
+                <span>Surprise</span>
+              </button>
+            </div>
+          </div>
+          <div class="stage-hint">
+            <span id="stage-panel-chip" class="stage-panel-chip">Panel 1 · Center Hero</span>
+            <span class="hint-text">Click panel to select · Drag to pan · Scroll to zoom</span>
+            <span id="studio-status-line" class="status-line" role="status" aria-live="polite">Offline · 100% local</span>
+          </div>
+        </div>
+      </main>
+
+      <!-- Zone 2 (~38%): High-Clarity Scrollable Inspector Sidebar -->
+      <aside class="inspector-sidebar" aria-label="Cover studio inspector">
         <section class="panel-section">
           <div class="section-head">
             <h2>Photos</h2>
@@ -83,7 +102,7 @@
           </div>
           <div class="upload-row single-upload-row">
             <label class="btn-add-photos" for="add-user-photos-input" title="Upload your own photos from disk">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
               <span>Add Photos</span>
@@ -95,106 +114,10 @@
 
           <div class="tray-actions">
             <button id="fill-all-panels-btn" class="btn-fill-all" type="button" title="Distribute loaded photos across all panels">Fill All Panels</button>
-            <button id="autofill-one-photo-btn" class="btn-sub-action" type="button" title="Fill every panel with varied crops of the active photo">1 Photo → All</button>
+            <button id="autofill-one-photo-btn" class="btn-sub-action" type="button" title="Fill every panel with 5+ distinct smart crops and grades from 1 photo">1 Photo → All</button>
           </div>
         </section>
 
-        <section class="panel-section">
-          <div class="section-head">
-            <h2>Crop &amp; Position</h2>
-            <span id="active-panel-badge" class="panel-chip">Panel 1 · Hero</span>
-          </div>
-
-          <div class="panel-sub-bar">
-            <label class="btn-inline-link" for="replace-panel-photo-input">
-              Replace Panel Photo
-              <input id="replace-panel-photo-input" type="file" accept="image/*" hidden>
-            </label>
-            <div class="mini-btn-pair">
-              <button id="flip-panel-btn" class="btn-mini" type="button" title="Flip horizontally (F)">Flip</button>
-              <button id="reset-panel-crop-btn" class="btn-mini" type="button" title="Reset crop (R)">Reset</button>
-            </div>
-          </div>
-
-          <div class="slider-stack">
-            <label class="slider-row">
-              <span class="slider-label">
-                <span>Zoom</span>
-                <output id="panel-zoom-val" class="num-val">1.05×</output>
-              </span>
-              <input id="panel-zoom-slider" class="range-cyan" type="range" min="100" max="280" value="105">
-            </label>
-
-            <div class="control-grid-2">
-              <label class="slider-row">
-                <span class="slider-label">
-                  <span>Pos X</span>
-                  <output id="panel-pan-x-val" class="num-val">0%</output>
-                </span>
-                <input id="panel-pan-x-slider" class="range-gold" type="range" min="-65" max="65" value="0">
-              </label>
-              <label class="slider-row">
-                <span class="slider-label">
-                  <span>Pos Y</span>
-                  <output id="panel-pan-y-val" class="num-val">0%</output>
-                </span>
-                <input id="panel-pan-y-slider" class="range-gold" type="range" min="-65" max="65" value="0">
-              </label>
-            </div>
-
-            <label class="slider-row">
-              <span class="slider-label">
-                <span>Rotate</span>
-                <output id="panel-rotate-val" class="num-val">0°</output>
-              </span>
-              <input id="panel-rotate-slider" class="range-pink" type="range" min="-25" max="25" value="0">
-            </label>
-          </div>
-
-          <div class="control-grid-2 compact-top">
-            <label class="field">
-              <span>Swap Panel</span>
-              <select id="swap-panel-select" aria-label="Swap with panel"></select>
-            </label>
-            <label class="field">
-              <span>Panel Grade</span>
-              <select id="panel-grade-select" aria-label="Per-panel color grade"></select>
-            </label>
-          </div>
-
-          <div class="control-grid-2 compact-top">
-            <label class="field">
-              <span>Role Tag (2 Words)</span>
-              <input id="panel-role-input" type="text" maxlength="18" placeholder="THE DRIVER">
-            </label>
-            <label class="field">
-              <span>Location Stamp</span>
-              <input id="panel-stamp-input" type="text" maxlength="30" placeholder="OCEAN DRIVE · 6:42 PM">
-            </label>
-          </div>
-        </section>
-      </aside>
-
-      <!-- Center Live Canvas Stage -->
-      <main class="stage" aria-label="Live cover art preview">
-        <div id="canvas-stage-frame" class="stage-frame">
-          <canvas id="cover-preview-canvas" width="1280" height="720" aria-label="Interactive Vice Cover Studio canvas"></canvas>
-          <div id="canvas-drop-overlay" class="drop-overlay" hidden>
-            <span>Drop photo onto panel</span>
-          </div>
-        </div>
-
-        <div class="stage-bar">
-          <div id="quick-preset-bar" class="preset-bar" role="group" aria-label="Cover theme presets"></div>
-          <div class="stage-hint">
-            <span id="stage-panel-chip" class="stage-panel-chip">Panel 1 · Hero</span>
-            <span id="studio-status-line" class="status-line" role="status" aria-live="polite">Offline · 100% local</span>
-          </div>
-        </div>
-      </main>
-
-      <!-- Right Rail: 8 Visual Layouts, 6 Color Grades, Sliders, Borders, Caption, Quote & Seal -->
-      <aside class="rail rail-right" aria-label="Layouts, color grade, borders and captions">
         <section class="panel-section">
           <div class="section-head">
             <h2>Multi-Panel Layout</h2>
@@ -205,119 +128,212 @@
 
         <section class="panel-section">
           <div class="section-head">
-            <h2>Grade</h2>
-            <div id="panel-border-style-picker" class="border-pills" role="radiogroup" aria-label="Panel border style"></div>
+            <h2>Color Grade</h2>
+            <span class="meta-pill">6 Looks</span>
           </div>
-
           <div id="color-grade-swatch-picker" class="grade-grid" role="radiogroup" aria-label="Color grades"></div>
+        </section>
 
-          <div class="slider-grid-3">
-            <label class="slider-row">
-              <span class="slider-label">
-                <span>Painterly</span>
-                <output id="painterly-val" class="num-val">72%</output>
-              </span>
-              <input id="painterly-art-slider" class="range-gold" type="range" min="0" max="100" value="72">
+        <section class="panel-section">
+          <div class="section-head">
+            <h2>Title &amp; Neon Script</h2>
+          </div>
+          <div class="control-grid-2">
+            <label class="field field-prominent">
+              <span>Main Title</span>
+              <input id="caption-title-input" type="text" maxlength="28" value="PALM HORIZON">
             </label>
-            <label class="slider-row">
-              <span class="slider-label">
-                <span>Ink</span>
-                <output id="sobel-ink-val" class="num-val">58%</output>
-              </span>
-              <input id="sobel-ink-slider" class="range-pink" type="range" min="0" max="100" value="58">
-            </label>
-            <label class="slider-row">
-              <span class="slider-label">
-                <span>Grade</span>
-                <output id="grade-intensity-val" class="num-val">92%</output>
-              </span>
-              <input id="grade-intensity-slider" class="range-cyan" type="range" min="0" max="100" value="92">
+            <label class="field field-prominent">
+              <span>Neon Script</span>
+              <input id="caption-script-input" type="text" maxlength="26" value="Sunset Syndicate">
             </label>
           </div>
         </section>
 
         <section class="panel-section">
           <div class="section-head">
-            <h2>Captions, Quote &amp; Seal</h2>
+            <h2>Selected Panel</h2>
+            <span id="active-panel-badge" class="panel-chip">Panel 1 · Center Hero</span>
           </div>
-
-          <div class="field-stack">
-            <div class="control-grid-2">
-              <label class="field">
-                <span>Main Title</span>
-                <input id="caption-title-input" type="text" maxlength="28" value="PALM HORIZON">
-              </label>
-              <label class="field">
-                <span>Neon Script</span>
-                <input id="caption-script-input" type="text" maxlength="24" value="Sunset Syndicate">
-              </label>
-            </div>
-
-            <label class="field">
-              <span>Top Press Quote Bar</span>
-              <input id="press-quote-input" type="text" maxlength="58" value='★★★★★ "PURE GOLDEN-HOUR ADRENALINE" — COASTAL WEEKLY'>
+          <label class="slider-row slider-row-prominent">
+            <span class="slider-label">
+              <span>Panel Zoom</span>
+              <output id="panel-zoom-val" class="num-val">1.05×</output>
+            </span>
+            <input id="panel-zoom-slider" class="range-cyan" type="range" min="100" max="280" value="105">
+          </label>
+          <div class="panel-sub-bar compact-top">
+            <label class="btn-inline-link" for="replace-panel-photo-input">
+              Replace Panel Photo
+              <input id="replace-panel-photo-input" type="file" accept="image/*" hidden>
             </label>
-
-            <label class="field">
-              <span>Tagline Pill</span>
-              <input id="sub-tagline-input" type="text" maxlength="52" value="FIVE STRANGERS · ONE COAST · NO WAY BACK">
-            </label>
-
-            <div class="control-grid-3">
-              <label class="field">
-                <span>Badge</span>
-                <input id="corner-badge-input" type="text" maxlength="16" value="VOL. 06" placeholder="VOL. 06">
-              </label>
-              <label class="field">
-                <span>Title Style</span>
-                <select id="title-style-select">
-                  <option value="sunset-extrude">Sunset 3D</option>
-                  <option value="neon-chrome">Neon Cyan</option>
-                  <option value="golden-heat">Molten Gold</option>
-                  <option value="noir-gold">Crimson 3D</option>
-                  <option value="clean-ink">Poster White</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Placement</span>
-                <select id="title-position-select">
-                  <option value="overlay-bottom">Full-Bleed</option>
-                  <option value="horizon-band">Horizon Band</option>
-                  <option value="docked-bottom">Bottom Band</option>
-                  <option value="top-banner">Top Stage</option>
-                  <option value="center-emblem">Center</option>
-                </select>
-              </label>
-            </div>
-
-            <div class="toggle-grid">
-              <label class="toggle-row">
-                <input id="toggle-role-tags" type="checkbox" checked>
-                <span>Roles</span>
-              </label>
-              <label class="toggle-row">
-                <input id="toggle-original-seal" type="checkbox" checked>
-                <span>Seal</span>
-              </label>
-              <label class="toggle-row">
-                <input id="toggle-press-quote" type="checkbox" checked>
-                <span>Quote</span>
-              </label>
-              <label class="toggle-row">
-                <input id="toggle-location-stamps" type="checkbox">
-                <span>Stamps</span>
-              </label>
-              <label class="toggle-row">
-                <input id="toggle-heat-stars" type="checkbox">
-                <span>5★ Heat</span>
-              </label>
-              <label class="toggle-row">
-                <input id="toggle-footer-strip" type="checkbox" checked>
-                <span>Footer</span>
-              </label>
+            <div class="mini-btn-pair">
+              <button id="flip-panel-btn" class="btn-mini" type="button" title="Flip horizontally (F)">Flip</button>
+              <button id="reset-panel-crop-btn" class="btn-mini" type="button" title="Reset crop (R)">Reset</button>
             </div>
           </div>
         </section>
+
+        <!-- Below the fold: Collapsible Advanced Framing & Art Engine controls -->
+        <details id="advanced-framing-drawer" class="advanced-drawer">
+          <summary>Advanced Framing &amp; Roles</summary>
+          <div class="drawer-body">
+            <div class="slider-stack">
+              <div class="control-grid-2">
+                <label class="slider-row">
+                  <span class="slider-label">
+                    <span>Pos X</span>
+                    <output id="panel-pan-x-val" class="num-val">0%</output>
+                  </span>
+                  <input id="panel-pan-x-slider" class="range-gold" type="range" min="-65" max="65" value="0">
+                </label>
+                <label class="slider-row">
+                  <span class="slider-label">
+                    <span>Pos Y</span>
+                    <output id="panel-pan-y-val" class="num-val">0%</output>
+                  </span>
+                  <input id="panel-pan-y-slider" class="range-gold" type="range" min="-65" max="65" value="0">
+                </label>
+              </div>
+              <label class="slider-row">
+                <span class="slider-label">
+                  <span>Rotate</span>
+                  <output id="panel-rotate-val" class="num-val">0°</output>
+                </span>
+                <input id="panel-rotate-slider" class="range-pink" type="range" min="-25" max="25" value="0">
+              </label>
+            </div>
+
+            <div class="control-grid-2 compact-top">
+              <label class="field">
+                <span>Swap Panel</span>
+                <select id="swap-panel-select" aria-label="Swap with panel"></select>
+              </label>
+              <label class="field">
+                <span>Panel Grade</span>
+                <select id="panel-grade-select" aria-label="Per-panel color grade"></select>
+              </label>
+            </div>
+
+            <div class="control-grid-2 compact-top">
+              <label class="field">
+                <span>Role Tag</span>
+                <input id="panel-role-input" type="text" maxlength="28" placeholder="THE DRIVER · 6:42 PM">
+              </label>
+              <label class="field">
+                <span>Location Stamp</span>
+                <input id="panel-stamp-input" type="text" maxlength="30" placeholder="OCEAN DRIVE · 6:42 PM">
+              </label>
+            </div>
+          </div>
+        </details>
+
+        <details id="advanced-art-drawer" class="advanced-drawer">
+          <summary>Art Engine, Borders &amp; Badges</summary>
+          <div class="drawer-body">
+            <div class="section-head">
+              <span class="drawer-subhead">Panel Border Style</span>
+              <div id="panel-border-style-picker" class="border-pills" role="radiogroup" aria-label="Panel border style"></div>
+            </div>
+
+            <div class="slider-grid-3">
+              <label class="slider-row">
+                <span class="slider-label">
+                  <span>Painterly</span>
+                  <output id="painterly-val" class="num-val">72%</output>
+                </span>
+                <input id="painterly-art-slider" class="range-gold" type="range" min="0" max="100" value="72">
+              </label>
+              <label class="slider-row">
+                <span class="slider-label">
+                  <span>Ink</span>
+                  <output id="sobel-ink-val" class="num-val">58%</output>
+                </span>
+                <input id="sobel-ink-slider" class="range-pink" type="range" min="0" max="100" value="58">
+              </label>
+              <label class="slider-row">
+                <span class="slider-label">
+                  <span>Grade</span>
+                  <output id="grade-intensity-val" class="num-val">92%</output>
+                </span>
+                <input id="grade-intensity-slider" class="range-cyan" type="range" min="0" max="100" value="92">
+              </label>
+            </div>
+
+            <div class="field-stack compact-top">
+              <label class="field">
+                <span>Top Press Quote Bar</span>
+                <input id="press-quote-input" type="text" maxlength="58" value='★★★★★ "PURE GOLDEN-HOUR ADRENALINE" — COASTAL WEEKLY'>
+              </label>
+
+              <label class="field">
+                <span>Tagline Pill</span>
+                <input id="sub-tagline-input" type="text" maxlength="52" value="SEVEN STORIES · ONE COAST · NO WAY BACK">
+              </label>
+
+              <div class="control-grid-2">
+                <label class="field">
+                  <span>Badge</span>
+                  <input id="corner-badge-input" type="text" maxlength="16" value="VOL. 06" placeholder="VOL. 06">
+                </label>
+                <label class="field">
+                  <span>Edition Pill</span>
+                  <input id="edition-pill-input" type="text" maxlength="18" value="COMING SOON" placeholder="COMING SOON">
+                </label>
+              </div>
+
+              <div class="control-grid-2">
+                <label class="field">
+                  <span>Title Style</span>
+                  <select id="title-style-select">
+                    <option value="sunset-extrude">Sunset 3D</option>
+                    <option value="neon-chrome">Neon Cyan</option>
+                    <option value="golden-heat">Molten Gold</option>
+                    <option value="noir-gold">Crimson 3D</option>
+                    <option value="clean-ink">Poster White</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Placement</span>
+                  <select id="title-position-select">
+                    <option value="overlay-bottom">Full-Bleed</option>
+                    <option value="horizon-band">Horizon Band</option>
+                    <option value="docked-bottom">Bottom Band</option>
+                    <option value="top-banner">Top Stage</option>
+                    <option value="center-emblem">Center</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="toggle-grid">
+                <label class="toggle-row">
+                  <input id="toggle-role-tags" type="checkbox" checked>
+                  <span>Roles</span>
+                </label>
+                <label class="toggle-row">
+                  <input id="toggle-original-seal" type="checkbox" checked>
+                  <span>Seal</span>
+                </label>
+                <label class="toggle-row">
+                  <input id="toggle-press-quote" type="checkbox" checked>
+                  <span>Quote</span>
+                </label>
+                <label class="toggle-row">
+                  <input id="toggle-location-stamps" type="checkbox">
+                  <span>Stamps</span>
+                </label>
+                <label class="toggle-row">
+                  <input id="toggle-heat-stars" type="checkbox">
+                  <span>5★ Heat</span>
+                </label>
+                <label class="toggle-row">
+                  <input id="toggle-footer-strip" type="checkbox" checked>
+                  <span>Footer</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </details>
       </aside>
     </div>
   </div>
