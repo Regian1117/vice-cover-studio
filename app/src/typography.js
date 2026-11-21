@@ -901,14 +901,14 @@ export function renderCoverTypographyAndBadges(
     const innerW = width - outerFrame * 2;
     const maxTextW = aspect < 0.90
       ? Math.min(innerW - 16, width * 0.88)
-      : innerW * (aspect > 1.25 ? 0.815 : 0.83);
+      : innerW * (aspect > 1.25 ? 0.875 : 0.83);
 
     let titleSize = Math.round(
       horizonBandH > 0
         ? Math.min(horizonBandH * 0.72, base * 0.205)
         : dockedTitleH > 0
           ? dockedTitleH * (aspect > 1.25 ? 0.74 : 0.64)
-          : base * (aspect > 1.25 ? 0.218 : aspect < 0.9 ? 0.215 : 0.205),
+          : base * (aspect > 1.25 ? 0.230 : aspect < 0.9 ? 0.215 : 0.205),
     );
 
     ctx.save();
@@ -928,7 +928,7 @@ export function renderCoverTypographyAndBadges(
     let anchorX = width * 0.5;
     let textAlign = 'center';
     const subReserve = hasSubPill ? Math.round(base * 0.056) : Math.round(base * 0.020);
-    let titleY = mosaicBottom - subReserve - Math.round(titleSize * 0.16);
+    let titleY = mosaicBottom - subReserve - Math.round(titleSize * 0.30);
 
     if (horizonBandH > 0) {
       anchorX = width * 0.5;
@@ -994,14 +994,14 @@ export function renderCoverTypographyAndBadges(
       ctx.lineJoin = 'round';
       ctx.miterLimit = 2;
 
-      const strokeW = Math.max(11, Math.round(titleSize * 0.132));
-      const extrudeSteps = style === 'clean-ink' ? 6 : 19;
-      const extrudeX = titleSize * 0.0096;
-      const extrudeY = titleSize * 0.0120;
+      const strokeW = Math.max(11, Math.round(titleSize * 0.136));
+      const extrudeSteps = style === 'clean-ink' ? 6 : 23;
+      const extrudeX = titleSize * 0.0102;
+      const extrudeY = titleSize * 0.0112;
 
-      // A) Deep 19-step obsidian-plum 3D extrusion
+      // A) Deep 23-step plum-to-obsidian 3D extrusion
       for (let s = extrudeSteps; s >= 1; s--) {
-        const shade = s > 13 ? '#260A42' : s > 7 ? '#150628' : '#07020E';
+        const shade = s > 19 ? '#421166' : s > 12 ? '#24083D' : s > 5 ? '#11041E' : '#06010C';
         ctx.fillStyle = shade;
         ctx.strokeStyle = shade;
         ctx.lineWidth = strokeW;
@@ -1018,9 +1018,9 @@ export function renderCoverTypographyAndBadges(
         ctx.shadowBlur = 0;
       }
 
-      // B) Warm champagne-gold bevel rim contour + heavy matte black comic keyline
-      ctx.strokeStyle = '#FFF8DC';
-      ctx.lineWidth = strokeW * 1.15;
+      // B) Crisp champagne bevel rim contour + heavy matte black comic keyline
+      ctx.strokeStyle = '#FFFCEE';
+      ctx.lineWidth = strokeW * 1.18;
       drawTextTracked(ctx, titleText, anchorX, titleY, finalTracking, 'stroke');
 
       ctx.strokeStyle = '#07040D';
@@ -1111,12 +1111,24 @@ export function renderCoverTypographyAndBadges(
         lctx.fillRect(0, syLine + shLine, width, Math.max(1.2, titleSize * 0.010));
       }
 
-      // Upper chrome specular sheen + crisp top-left bevel rim highlight
+      // Upper chrome specular sheen + diagonal metallic specular sweep + crisp top-left bevel rim highlight
       const sheenGrad = lctx.createLinearGradient(0, localY - titleSize * 0.88, 0, localY - titleSize * 0.44);
       sheenGrad.addColorStop(0, 'rgba(255, 255, 255, 0.78)');
       sheenGrad.addColorStop(0.85, 'rgba(255, 255, 255, 0.20)');
       sheenGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
       lctx.fillStyle = sheenGrad;
+      lctx.fillRect(0, 0, width, bandH);
+
+      const chromeSweep = lctx.createLinearGradient(
+        width * 0.14, localY - titleSize * 0.92,
+        width * 0.72, localY - titleSize * 0.10,
+      );
+      chromeSweep.addColorStop(0.00, 'rgba(255, 255, 255, 0)');
+      chromeSweep.addColorStop(0.42, 'rgba(255, 255, 255, 0.42)');
+      chromeSweep.addColorStop(0.50, 'rgba(255, 255, 255, 0.68)');
+      chromeSweep.addColorStop(0.58, 'rgba(255, 255, 255, 0.26)');
+      chromeSweep.addColorStop(1.00, 'rgba(255, 255, 255, 0)');
+      lctx.fillStyle = chromeSweep;
       lctx.fillRect(0, 0, width, bandH);
 
       lctx.lineWidth = Math.max(2.8, titleSize * 0.020);
@@ -1185,7 +1197,7 @@ export function renderCoverTypographyAndBadges(
         ctx.restore();
       };
       drawSwoosh(Math.max(7, scriptSize * 0.14), '#0B0612', 0);
-      drawSwoosh(Math.max(3.5, scriptSize * 0.07), grade.scriptColor, 18);
+      drawSwoosh(Math.max(3.5, scriptSize * 0.082), grade.scriptColor, 24);
       drawSwoosh(Math.max(1.5, scriptSize * 0.026), 'rgba(255, 255, 255, 0.88)', 4);
 
       ctx.lineWidth = Math.max(8, Math.round(scriptSize * 0.21));
@@ -1193,7 +1205,7 @@ export function renderCoverTypographyAndBadges(
       ctx.strokeText(scriptText, 0, 0);
 
       ctx.shadowColor = grade.scriptGlow;
-      ctx.shadowBlur = 24;
+      ctx.shadowBlur = 28;
       ctx.fillStyle = grade.scriptColor;
       ctx.fillText(scriptText, 0, 0);
 

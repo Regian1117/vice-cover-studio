@@ -578,6 +578,15 @@ function renderPhotoLibraryTray() {
   }
 }
 
+function updateSliderFill(el) {
+  if (!el) return;
+  const min = Number(el.min || 0);
+  const max = Number(el.max || 100);
+  const val = Number(el.value || 0);
+  const pct = max > min ? Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100)) : 0;
+  el.style.setProperty('--val-pct', `${pct.toFixed(1)}%`);
+}
+
 function syncPanelInspectorUI() {
   const p = studioState.panels[studioState.selectedPanel];
   if (!p) return;
@@ -585,11 +594,20 @@ function syncPanelInspectorUI() {
   const photoEntry = photoMap.get(p.photoId);
   const chipLabel = `Panel ${studioState.selectedPanel + 1}${geom ? ' · ' + geom.label : ''}`;
   if (dom.activePanelBadge) dom.activePanelBadge.textContent = chipLabel;
-  if (dom.zoomSlider) dom.zoomSlider.value = String(Math.round((p.zoom || 1) * 100));
+  if (dom.zoomSlider) {
+    dom.zoomSlider.value = String(Math.round((p.zoom || 1) * 100));
+    updateSliderFill(dom.zoomSlider);
+  }
   if (dom.zoomVal) dom.zoomVal.textContent = `${(p.zoom || 1).toFixed(2)}×`;
-  if (dom.panXSlider) dom.panXSlider.value = String(Math.round((p.panX || 0) * 100));
+  if (dom.panXSlider) {
+    dom.panXSlider.value = String(Math.round((p.panX || 0) * 100));
+    updateSliderFill(dom.panXSlider);
+  }
   if (dom.panXVal) dom.panXVal.textContent = `${Math.round((p.panX || 0) * 100)}%`;
-  if (dom.panYSlider) dom.panYSlider.value = String(Math.round((p.panY || 0) * 100));
+  if (dom.panYSlider) {
+    dom.panYSlider.value = String(Math.round((p.panY || 0) * 100));
+    updateSliderFill(dom.panYSlider);
+  }
   if (dom.panYVal) dom.panYVal.textContent = `${Math.round((p.panY || 0) * 100)}%`;
   if (dom.rotateSlider) dom.rotateSlider.value = String(Math.round(p.rotation || 0));
   if (dom.rotateVal) dom.rotateVal.textContent = `${Math.round(p.rotation || 0)}°`;
@@ -922,16 +940,19 @@ function wireInteractions() {
   }
 
   dom.zoomSlider.addEventListener('input', () => {
+    updateSliderFill(dom.zoomSlider);
     updatePanelCropPanZoom(studioState.selectedPanel, { zoom: Number(dom.zoomSlider.value) / 100 });
     scheduleDebouncedHistory();
   });
 
   dom.panXSlider.addEventListener('input', () => {
+    updateSliderFill(dom.panXSlider);
     updatePanelCropPanZoom(studioState.selectedPanel, { panX: Number(dom.panXSlider.value) / 100 });
     scheduleDebouncedHistory();
   });
 
   dom.panYSlider.addEventListener('input', () => {
+    updateSliderFill(dom.panYSlider);
     updatePanelCropPanZoom(studioState.selectedPanel, { panY: Number(dom.panYSlider.value) / 100 });
     scheduleDebouncedHistory();
   });

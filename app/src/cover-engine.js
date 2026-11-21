@@ -594,7 +594,7 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
   const geometries = computeLayoutGeometry(state.layoutId, width, height, outerFrame, topReservePx, bottomReservePx);
   const heroIdx = Math.max(0, geometries.findIndex((g) => g.role === 'hero'));
   const titleSafeTopY = (pos === 'overlay-bottom' || pos === 'bottom-left')
-    ? mosaicBottom - Math.round(base * (aspect > 1.25 ? 0.302 : aspect < 0.9 ? 0.235 : 0.255))
+    ? mosaicBottom - Math.round(base * (aspect > 1.25 ? 0.345 : aspect < 0.9 ? 0.265 : 0.285))
     : mosaicBottom;
 
   // 3) Render each stylized photo clipped cleanly to its angled panel polygon

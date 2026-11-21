@@ -200,13 +200,15 @@ export function applyViceColorGradeAndInk(
   const warm = grade.warmth * gradeMix;
   const expBias = (grade.exposureBias || 0) * gradeMix;
 
-  const { low, invRange, duskGamma, shadowLift } = computeAutoLevelsParams(painted, width, height, isNightGrade);
+  const autoLv = computeAutoLevelsParams(painted, width, height, isNightGrade);
+  const { low, invRange, duskGamma } = autoLv;
+  const shadowLift = autoLv.shadowLift * 0.55;
   const paintMix = clamp01(paintStrength);
-  const levels = 11.0;
-  const posterMix = paintMix * 0.20;
-  const inkAlphaMax = clamp01(inkStrength) * 0.76;
-  const inkThresholdLow = 44;
-  const inkThresholdHigh = 142;
+  const levels = 7.5;
+  const posterMix = paintMix * 0.38;
+  const inkAlphaMax = clamp01(inkStrength) * 0.94;
+  const inkThresholdLow = 34;
+  const inkThresholdHigh = 116;
   const htAmt = clamp01(halftoneStrength);
   const htFreq = (Math.PI * 2) / (highRes ? 7.0 : 4.5);
   const cos45 = 0.70710678;
@@ -333,10 +335,10 @@ export function applyViceColorGradeAndInk(
         const mag = edges[i];
         if (mag > inkThresholdLow) {
           const t = Math.min(1, (mag - inkThresholdLow) / (inkThresholdHigh - inkThresholdLow));
-          const inkAmt = t * t * inkAlphaMax * (1 - skinKeep * 0.52);
-          fr = fr * (1 - inkAmt) + 14 * inkAmt;
-          fg = fg * (1 - inkAmt) + 7 * inkAmt;
-          fb = fb * (1 - inkAmt) + 24 * inkAmt;
+          const inkAmt = t * t * inkAlphaMax * (1 - skinKeep * 0.62);
+          fr = fr * (1 - inkAmt) + 12 * inkAmt;
+          fg = fg * (1 - inkAmt) + 6 * inkAmt;
+          fb = fb * (1 - inkAmt) + 22 * inkAmt;
         }
       }
 
@@ -415,15 +417,15 @@ export function runPainterlySobelInkPipeline(
   const grade = getGradeById(gradeId);
   const bloomCanvas = makeOffscreen(Math.max(32, Math.round(w * 0.25)), Math.max(32, Math.round(h * 0.25)));
   const bctx = bloomCanvas.getContext('2d');
-  bctx.filter = 'brightness(1.22) contrast(1.72) blur(6px)';
+  bctx.filter = 'brightness(1.18) contrast(1.80) blur(5px)';
   bctx.drawImage(workCanvas, 0, 0, bloomCanvas.width, bloomCanvas.height);
 
   wctx.save();
   wctx.globalCompositeOperation = 'screen';
-  wctx.globalAlpha = 0.22 * (0.4 + 0.6 * qGrade);
+  wctx.globalAlpha = 0.16 * (0.4 + 0.6 * qGrade);
   wctx.drawImage(bloomCanvas, 0, 0, w, h);
   wctx.fillStyle = grade.bloomColor;
-  wctx.globalAlpha = 0.16 * qGrade;
+  wctx.globalAlpha = 0.12 * qGrade;
   wctx.fillRect(0, 0, w, h);
   wctx.restore();
 

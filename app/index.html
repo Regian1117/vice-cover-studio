@@ -24,14 +24,14 @@
             </linearGradient>
           </defs>
         </svg>
-        <span class="brand-name">VICE COVER STUDIO</span>
-        <span class="offline-pill">OFFLINE · LOCAL</span>
+        <span class="brand-name">VICE COVER</span>
+        <span class="offline-pill">OFFLINE</span>
       </div>
 
       <div id="post-size-selector" class="size-pill-group" role="group" aria-label="Post export sizes">
-        <button id="post-size-1920x1080" class="size-btn active" type="button" data-size="landscape">1920 × 1080</button>
-        <button id="post-size-1080x1350" class="size-btn" type="button" data-size="portrait">1080 × 1350</button>
-        <button id="post-size-1080x1080" class="size-btn" type="button" data-size="square">1080 × 1080</button>
+        <button id="post-size-1920x1080" class="size-btn active" type="button" data-size="landscape">1920×1080</button>
+        <button id="post-size-1080x1350" class="size-btn" type="button" data-size="portrait">1080×1350</button>
+        <button id="post-size-1080x1080" class="size-btn" type="button" data-size="square">1080×1080</button>
       </div>
 
       <div class="topbar-actions">
@@ -99,7 +99,7 @@
           <div class="panel-action-row">
             <span id="active-panel-badge" class="panel-chip" hidden>Panel 1</span>
             <label class="btn-replace-photo" for="replace-panel-photo-input">
-              Replace Panel Photo
+              CROP &amp; DRAG EACH PHOTO
               <input id="replace-panel-photo-input" type="file" accept="image/*" hidden>
             </label>
             <div class="mini-btn-pair">
@@ -108,21 +108,29 @@
             </div>
           </div>
           <div class="crop-sliders-stack">
-            <label class="crop-slider-row">
-              <span class="crop-slider-name">ZOOM</span>
+            <label class="crop-slider-box crop-box-zoom">
+              <span class="crop-box-head">
+                <span class="crop-pill pill-cyan">ZOOM</span>
+                <output id="panel-zoom-val" class="crop-slider-val">1.05×</output>
+              </span>
               <input id="panel-zoom-slider" class="range-cyan" type="range" min="100" max="280" value="105">
-              <output id="panel-zoom-val" class="crop-slider-val">1.05×</output>
             </label>
-            <label class="crop-slider-row">
-              <span class="crop-slider-name">PAN X</span>
-              <input id="panel-pan-x-slider" class="range-gold" type="range" min="-65" max="65" value="0">
-              <output id="panel-pan-x-val" class="crop-slider-val">0%</output>
-            </label>
-            <label class="crop-slider-row">
-              <span class="crop-slider-name">PAN Y</span>
-              <input id="panel-pan-y-slider" class="range-pink" type="range" min="-65" max="65" value="0">
-              <output id="panel-pan-y-val" class="crop-slider-val">0%</output>
-            </label>
+            <div class="crop-pan-grid">
+              <label class="crop-slider-box crop-box-panx">
+                <span class="crop-box-head">
+                  <span class="crop-pill pill-gold">PAN X</span>
+                  <output id="panel-pan-x-val" class="crop-slider-val">0%</output>
+                </span>
+                <input id="panel-pan-x-slider" class="range-gold" type="range" min="-65" max="65" value="0">
+              </label>
+              <label class="crop-slider-box crop-box-pany">
+                <span class="crop-box-head">
+                  <span class="crop-pill pill-pink">PAN Y</span>
+                  <output id="panel-pan-y-val" class="crop-slider-val">0%</output>
+                </span>
+                <input id="panel-pan-y-slider" class="range-pink" type="range" min="-65" max="65" value="0">
+              </label>
+            </div>
           </div>
         </section>
 
