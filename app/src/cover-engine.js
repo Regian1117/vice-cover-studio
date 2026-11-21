@@ -5,7 +5,7 @@
 import { computeLayoutGeometry } from './layouts.js';
 import { getGradeById, getBorderStyleById } from './grades.js';
 import { runPainterlySobelInkPipeline, getPosterGrainCanvas } from './art-pipeline.js';
-import { renderCoverTypographyAndBadges } from './typography.js';
+import { renderCoverTypographyAndBadges, renderHorizonSkylineBand } from './typography.js';
 
 const subjectAnchorCache = new Map();
 
@@ -400,12 +400,22 @@ function drawPanelLocationStamp(ctx, geom, stampText, outerFrame, topReservePx, 
   ctx.restore();
 }
 
-function expandHeroGeometry(geom, popPx, minX, minY, maxX, maxY) {
+function expandHeroGeometry(geom, popPx, minX, minY, maxX, maxY, bottomOverhang = 0) {
   const { cx, cy } = geom.bounds;
   const pts = geom.pts.map(([x, y]) => {
     const nx = Math.abs(x - minX) <= 2 || Math.abs(x - maxX) <= 2 ? x : x + (x >= cx ? popPx : -popPx);
-    const ny = Math.abs(y - minY) <= 2 || Math.abs(y - maxY) <= 2 ? y : y + (y >= cy ? popPx : -popPx);
-    return [Math.max(minX, Math.min(maxX, nx)), Math.max(minY, Math.min(maxY, ny))];
+    let ny;
+    if (Math.abs(y - minY) <= 2) {
+      ny = y;
+    } else if (Math.abs(y - maxY) <= 2) {
+      ny = bottomOverhang > 0 ? y + bottomOverhang : y;
+    } else {
+      ny = y + (y >= cy ? popPx : -popPx);
+    }
+    return [
+      Math.max(minX, Math.min(maxX, nx)),
+      Math.max(minY, Math.min(maxY + bottomOverhang, ny)),
+    ];
   });
   let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
   for (const [px, py] of pts) {
@@ -428,13 +438,103 @@ function expandHeroGeometry(geom, popPx, minX, minY, maxX, maxY) {
   };
 }
 
+export function drawSelectionCropReticle(ctx, geom, pState, base, accentColor) {
+  if (!geom || !geom.pts || geom.pts.length < 4) return;
+  const reticleColor = '#2EE8FF';
+  const [p0, p1, p2, p3] = geom.pts;
+  const pad = Math.max(14, Math.round(base * 0.022));
+  const topY = Math.max(p0[1], p1[1]) + pad;
+  const botY = Math.min(p2[1], p3[1]) - pad;
+  if (botY - topY < 48) return;
+
+  const leftX = Math.max(edgeXAtY(p0, p3, topY), edgeXAtY(p0, p3, botY)) + pad;
+  const rightX = Math.min(edgeXAtY(p1, p2, topY), edgeXAtY(p1, p2, botY)) - pad;
+  const rw = rightX - leftX;
+  const rh = botY - topY;
+  if (rw < 48) return;
+
+  const arm = Math.max(12, Math.min(26, Math.round(Math.min(rw, rh) * 0.14)));
+  const rcx = (leftX + rightX) * 0.5;
+  const rcy = (topY + botY) * 0.5;
+  const crossArm = Math.max(8, Math.round(arm * 0.55));
+  const crossGap = Math.max(3, Math.round(crossArm * 0.28));
+
+  ctx.save();
+  tracePolygon(ctx, geom.pts);
+  ctx.clip();
+
+  ctx.strokeStyle = 'rgba(46, 232, 255, 0.30)';
+  ctx.lineWidth = Math.max(1, base * 0.0012);
+  ctx.setLineDash([5, 5]);
+  ctx.strokeRect(leftX, topY, rw, rh);
+  ctx.setLineDash([]);
+
+  const traceReticleLines = () => {
+    ctx.beginPath();
+    ctx.moveTo(leftX, topY + arm); ctx.lineTo(leftX, topY); ctx.lineTo(leftX + arm, topY);
+    ctx.moveTo(rightX - arm, topY); ctx.lineTo(rightX, topY); ctx.lineTo(rightX, topY + arm);
+    ctx.moveTo(rightX, botY - arm); ctx.lineTo(rightX, botY); ctx.lineTo(rightX - arm, botY);
+    ctx.moveTo(leftX + arm, botY); ctx.lineTo(leftX, botY); ctx.lineTo(leftX, botY - arm);
+    ctx.moveTo(rcx - crossArm, rcy); ctx.lineTo(rcx - crossGap, rcy);
+    ctx.moveTo(rcx + crossGap, rcy); ctx.lineTo(rcx + crossArm, rcy);
+    ctx.moveTo(rcx, rcy - crossArm); ctx.lineTo(rcx, rcy - crossGap);
+    ctx.moveTo(rcx, rcy + crossGap); ctx.lineTo(rcx, rcy + crossArm);
+  };
+
+  ctx.lineCap = 'square';
+  ctx.lineJoin = 'miter';
+  traceReticleLines();
+  ctx.strokeStyle = 'rgba(6, 3, 14, 0.88)';
+  ctx.lineWidth = Math.max(4.5, base * 0.0048);
+  ctx.stroke();
+
+  traceReticleLines();
+  ctx.strokeStyle = reticleColor;
+  ctx.lineWidth = Math.max(2.2, base * 0.0024);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(rcx, rcy, Math.max(2.2, base * 0.0024), 0, Math.PI * 2);
+  ctx.fillStyle = accentColor || reticleColor;
+  ctx.fill();
+
+  const zoomStr = `${(pState?.zoom || 1).toFixed(2)}× CROP`;
+  const pillFs = Math.max(11, Math.min(16, Math.round(base * 0.013)));
+  ctx.font = `700 ${pillFs}px "Barlow", sans-serif`;
+  const textW = ctx.measureText(zoomStr).width;
+  const pillPadX = Math.round(pillFs * 0.55);
+  const pillW = Math.min(rw - 8, textW + pillPadX * 2);
+  const pillH = Math.round(pillFs * 1.52);
+  const px = rightX - pillW;
+  const py = topY;
+
+  ctx.fillStyle = 'rgba(6, 3, 14, 0.86)';
+  ctx.beginPath();
+  ctx.roundRect(px + 1.5, py + 2, pillW, pillH, 5);
+  ctx.fill();
+
+  ctx.fillStyle = reticleColor;
+  ctx.beginPath();
+  ctx.roundRect(px, py, pillW, pillH, 5);
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.5, base * 0.0016);
+  ctx.strokeStyle = '#080514';
+  ctx.stroke();
+
+  ctx.fillStyle = '#080514';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(zoomStr, px + pillW * 0.5, py + pillH * 0.53, pillW - 6);
+  ctx.restore();
+}
+
 function renderPanelArtwork(ctx, geom, pState, photoEntry, effectiveGradeId, state, grade, isExport) {
   if (photoEntry && photoEntry.img) {
     const styled = runPainterlySobelInkPipeline(
       photoEntry,
       effectiveGradeId,
-      state.paintStrength ?? 0.72,
-      state.inkStrength ?? 0.58,
+      state.paintStrength ?? 0.84,
+      state.inkStrength ?? 0.68,
       state.gradeStrength ?? 0.92,
       state.halftoneStrength ?? 0.34,
       isExport,
@@ -568,7 +668,7 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
   const footerH = showFooter ? Math.round(height * (aspect > 1.25 ? 0.068 : aspect < 0.9 ? 0.056 : 0.064)) : 0;
 
   const horizonBandH = pos === 'horizon-band'
-    ? Math.round(height * (aspect > 1.25 ? 0.25 : aspect < 0.9 ? 0.22 : 0.245))
+    ? Math.round(height * (aspect > 1.25 ? 0.215 : aspect < 0.9 ? 0.20 : 0.228))
     : 0;
   const dockedTitleH = pos === 'docked-bottom'
     ? Math.round(height * (aspect > 1.25 ? 0.215 : aspect < 0.9 ? 0.205 : 0.215))
@@ -652,19 +752,28 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
     );
   }
 
-  // 5b) Elevated 3D Hero Card Pop-Out over adjacent panel gutters
-  if (geometries[heroIdx]) {
-    const heroGeom = geometries[heroIdx];
+  // 5b) Elevated 3D Hero Card Pop-Out (with optional horizon-stage break-out when hero touches mosaicBottom)
+  const heroGeom = geometries[heroIdx];
+  const heroTouchesBottom = Boolean(heroGeom && (heroGeom.bounds.y + heroGeom.bounds.h >= mosaicBottom - 3));
+  const breakIntoStage = horizonBandH > 0 && heroTouchesBottom;
+  if (breakIntoStage) {
+    renderHorizonSkylineBand(ctx, width, outerFrame, mosaicBottom, horizonBandH, gutterPx, grade, borderStyle);
+  }
+
+  let elevatedHeroGeom = null;
+  if (heroGeom) {
     const heroState = state.panels[heroIdx] || {};
     const heroPhoto = photoMap.get(heroState.photoId) || [...photoMap.values()][0];
     const heroGradeId = heroState.gradeOverride || state.gradeId;
-    const popPx = Math.max(5, Math.round(gutterPx * 0.62));
-    const elevatedGeom = expandHeroGeometry(heroGeom, popPx, outerFrame, mosaicTop, width - outerFrame, mosaicBottom);
-    const heroRimColor = (state.gradeId === 'midnight-neon' && aspect < 0.92) ? '#96F7FF' : '#FFE9B8';
+    const popPx = Math.max(10, Math.round(gutterPx * 1.45));
+    const stageOverhang = breakIntoStage ? Math.round(height * 0.030) : 0;
+    const elevatedGeom = expandHeroGeometry(heroGeom, popPx, outerFrame, mosaicTop, width - outerFrame, mosaicBottom, stageOverhang);
+    elevatedHeroGeom = elevatedGeom;
+    const heroRimColor = (state.gradeId === 'midnight-neon' && aspect < 0.92) ? '#96F7FF' : '#FFF3C8';
 
     ctx.save();
     ctx.beginPath();
-    ctx.rect(outerFrame, mosaicTop, width - outerFrame * 2, panelAreaH);
+    ctx.rect(outerFrame, mosaicTop, width - outerFrame * 2, breakIntoStage ? panelAreaH + horizonBandH : panelAreaH);
     ctx.clip();
 
     // Deep cast drop shadow onto adjacent panels (wide ambient + crisp contact shadow)
@@ -730,12 +839,23 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
     ctx.restore();
 
     // Redraw hero Role Tag cleanly on top of the elevated card
-    const heroTitleSafeTopY = titleSafeTopY - Math.round(base * 0.014);
+    const heroTitleSafeTopY = breakIntoStage
+      ? mosaicBottom - Math.round(base * 0.028)
+      : titleSafeTopY - Math.round(base * 0.014);
     renderPanelBadges(
       ctx, elevatedGeom, heroState, heroPhoto, state, mosaicTop, mosaicBottom,
       heroTitleSafeTopY, outerFrame, topReservePx, width, base, gutterPx, grade.accentColor,
     );
     ctx.restore();
+  }
+
+  // 5c) Live Editor Selection Crop Reticle (never drawn during export)
+  if (showSelection && !isExport) {
+    const selIdx = state.selectedPanel;
+    const selGeom = selIdx === heroIdx && elevatedHeroGeom ? elevatedHeroGeom : geometries[selIdx];
+    if (selGeom) {
+      drawSelectionCropReticle(ctx, selGeom, state.panels[selIdx] || {}, base, grade.accentColor);
+    }
   }
 
   // 6) Outer frame + razor-sharp champagne-gold / collector edge border
@@ -763,6 +883,7 @@ export function composeMultiPanelCover(canvas, state, photoMap, options = {}) {
     gutterPx,
     topHeaderH,
     horizonBandH,
+    { skipHorizonBand: breakIntoStage },
   );
 
   ctx.restore();

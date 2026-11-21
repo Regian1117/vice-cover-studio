@@ -802,30 +802,23 @@ input[type="range"].range-pink::-webkit-slider-thumb {
   color: #E2D9FF;
 }
 
-.caption-field input[type="text"] {
+body:not(.shot-cover-only) .caption-field input,
+body:not(.shot-cover-only) .caption-field input[type="text"] {
   width: 100%;
   height: 48px;
   padding: 0 11px;
   border-radius: 8px;
-  background: #0F091F;
-  color: #FFFFFF;
+  background: #F4F0FF;
+  color: #080514;
+  border: 2px solid #FF6AC8;
   font: 900 20px/1 var(--font-ui);
+  caret-color: #080514;
   outline: none;
   min-width: 0;
 }
 
-.caption-title-field input[type="text"] {
-  border: 2.5px solid var(--accent-cyan);
-  caret-color: var(--accent-cyan);
-}
-
-.caption-script-field input[type="text"] {
-  border: 2.5px solid var(--accent-pink);
-  caret-color: var(--accent-pink);
-}
-
-.caption-field input[type="text"]:focus {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
+body:not(.shot-cover-only) .caption-field input:focus {
+  box-shadow: 0 0 0 2px rgba(46, 232, 255, 0.65);
 }
 
 /* Card 4: Layouts & Grades */

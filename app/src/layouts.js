@@ -1,4 +1,4 @@
-// 8 Multi-panel GTA-style cover layouts with crisp angled comic dividers
+// 9 Multi-panel GTA-style cover layouts with crisp angled comic dividers
 // Coordinates are normalized [0..1] inside the panel mosaic zone (between top frame & lower title stage).
 
 export const EXPORT_SIZES = [
@@ -50,6 +50,88 @@ function buildAngledRowGrid(rows, skew) {
 }
 
 export const MULTI_PANEL_LAYOUTS = [
+  {
+    id: 'grand-coast-8',
+    name: '8-Panel Grand Coast',
+    shortName: '8P Coast',
+    panelCount: 8,
+    paletteFill: ['#FF6B4A', '#FFC845', '#FF2FA8', '#2EE8FF', '#9E5BFF', '#00D8C4', '#FF8E3C', '#FFD866'],
+    description: '8-panel steep chevron diagonal grand coast montage with commanding center hero',
+    getPanels(aspect) {
+      if (aspect > 1.22) {
+        return [
+          { id: 0, label: 'Center Hero', role: 'hero', points: [[0.315, 0.0], [0.685, 0.0], [0.630, 1.0], [0.370, 1.0]] },
+          { id: 1, label: 'Top Left', role: 'portrait', points: [[0.0, 0.0], [0.315, 0.0], [0.342, 0.490], [0.0, 0.435]] },
+          { id: 2, label: 'Bot Outer Left', role: 'action', points: [[0.0, 0.435], [0.185, 0.465], [0.145, 1.0], [0.0, 1.0]] },
+          { id: 3, label: 'Bot Inner Left', role: 'detail', points: [[0.185, 0.465], [0.342, 0.490], [0.370, 1.0], [0.145, 1.0]] },
+          { id: 4, label: 'Top Inner Right', role: 'closeup', points: [[0.685, 0.0], [0.875, 0.0], [0.835, 0.457], [0.659, 0.480]] },
+          { id: 5, label: 'Top Far Right', role: 'wide', points: [[0.875, 0.0], [1.0, 0.0], [1.0, 0.435], [0.835, 0.457]] },
+          { id: 6, label: 'Bot Inner Right', role: 'skyline', points: [[0.659, 0.480], [0.835, 0.457], [0.798, 1.0], [0.630, 1.0]] },
+          { id: 7, label: 'Bot Far Right', role: 'wide', points: [[0.835, 0.457], [1.0, 0.435], [1.0, 1.0], [0.798, 1.0]] },
+        ];
+      }
+      if (aspect < 0.90) {
+        return buildAngledRowGrid([
+          {
+            bottom: 0.28,
+            tiltBot: -0.022,
+            cols: [
+              { right: 0.34, label: 'Top Left', role: 'portrait' },
+              { right: 0.67, label: 'Top Mid', role: 'action' },
+              { right: 1.0, label: 'Top Right', role: 'closeup' },
+            ],
+          },
+          {
+            bottom: 0.69,
+            tiltTop: -0.022,
+            tiltBot: 0.022,
+            cols: [
+              { right: 0.60, label: 'Hero Left', role: 'hero' },
+              { right: 1.0, label: 'Mid Right', role: 'detail' },
+            ],
+          },
+          {
+            bottom: 1.0,
+            tiltTop: 0.022,
+            cols: [
+              { right: 0.33, label: 'Bot Left', role: 'wide' },
+              { right: 0.67, label: 'Bot Mid', role: 'skyline' },
+              { right: 1.0, label: 'Bot Right', role: 'wide' },
+            ],
+          },
+        ], 0.028);
+      }
+      return buildAngledRowGrid([
+        {
+          bottom: 0.42,
+          tiltBot: -0.020,
+          cols: [
+            { right: 0.56, label: 'Hero', role: 'hero' },
+            { right: 1.0, label: 'Top Right', role: 'portrait' },
+          ],
+        },
+        {
+          bottom: 0.72,
+          tiltTop: -0.020,
+          tiltBot: 0.018,
+          cols: [
+            { right: 0.34, label: 'Mid Left', role: 'action' },
+            { right: 0.67, label: 'Mid Center', role: 'detail' },
+            { right: 1.0, label: 'Mid Right', role: 'closeup' },
+          ],
+        },
+        {
+          bottom: 1.0,
+          tiltTop: 0.018,
+          cols: [
+            { right: 0.33, label: 'Bot Left', role: 'wide' },
+            { right: 0.68, label: 'Bot Mid', role: 'skyline' },
+            { right: 1.0, label: 'Bot Right', role: 'wide' },
+          ],
+        },
+      ], 0.026);
+    },
+  },
   {
     id: 'center-hero-7',
     name: '7-Panel Center Hero',
@@ -303,7 +385,7 @@ export const MULTI_PANEL_LAYOUTS = [
 
 export const LAYOUT_PRESETS = MULTI_PANEL_LAYOUTS;
 
-export const FEATURED_LAYOUT_IDS = ['hero-slant-6', 'vertical-poster-6', 'classic-box-5', 'center-hero-7'];
+export const FEATURED_LAYOUT_IDS = ['grand-coast-8', 'hero-slant-6', 'vertical-poster-6', 'classic-box-5'];
 
 export function getLayoutById(layoutId) {
   return MULTI_PANEL_LAYOUTS.find((l) => l.id === layoutId) || MULTI_PANEL_LAYOUTS[0];
@@ -366,10 +448,10 @@ export function hitTestPanel(geometries, px, py) {
 // Varied dramatic crop presets when filling all panels with ONE user photo
 export const SMART_SINGLE_PHOTO_SHOTS = [
   { zoom: 1.04, panX: 0.0, panY: 0.04, rotation: 0, flipH: false, cropFocalX: null, cropFocalY: null, label: 'FULL SHOT', preferredGrade: '' },
-  { zoom: 1.76, panX: 0.02, panY: 0.02, rotation: -3, flipH: false, cropFocalX: 0.54, cropFocalY: 0.24, label: 'CLOSE-UP', preferredGrade: 'vice-sunset' },
-  { zoom: 1.18, panX: 0.04, panY: 0.02, rotation: 2.0, flipH: false, cropFocalX: 0.10, cropFocalY: 0.16, label: 'WIDE ANGLE', preferredGrade: 'tropical-cyan' },
-  { zoom: 1.54, panX: -0.02, panY: -0.04, rotation: 3.5, flipH: false, cropFocalX: 0.32, cropFocalY: 0.76, label: 'DETAIL CROP', preferredGrade: 'vice-noir' },
-  { zoom: 1.66, panX: -0.04, panY: 0.02, rotation: -2.5, flipH: true, cropFocalX: 0.58, cropFocalY: 0.28, label: 'PROFILE', preferredGrade: 'midnight-neon' },
+  { zoom: 2.05, panX: 0.0, panY: 0.0, rotation: -2.5, flipH: false, cropFocalX: 0.52, cropFocalY: 0.24, label: 'CLOSE-UP', preferredGrade: 'vice-sunset-gold' },
+  { zoom: 1.82, panX: 0.0, panY: 0.0, rotation: 1.5, flipH: false, cropFocalX: 0.21, cropFocalY: 0.34, label: 'WIDE ANGLE', preferredGrade: 'tropical-cyan' },
+  { zoom: 2.05, panX: 0.0, panY: 0.0, rotation: 2.5, flipH: false, cropFocalX: 0.14, cropFocalY: 0.72, label: 'DETAIL CROP', preferredGrade: 'golden-heatwave' },
+  { zoom: 2.02, panX: 0.0, panY: 0.0, rotation: -2.0, flipH: false, cropFocalX: 0.84, cropFocalY: 0.24, label: 'PALM COAST', preferredGrade: 'vice-sunset' },
   { zoom: 1.32, panX: 0.08, panY: -0.04, rotation: -2, flipH: false, cropFocalX: 0.76, cropFocalY: 0.22, label: 'SKYLINE', preferredGrade: 'synth-chrome' },
   { zoom: 1.88, panX: -0.06, panY: 0.02, rotation: 2, flipH: true, cropFocalX: 0.42, cropFocalY: 0.46, label: 'ACTION CROP', preferredGrade: 'golden-heatwave' },
   { zoom: 1.42, panX: 0.04, panY: 0.06, rotation: -1.5, flipH: false, cropFocalX: 0.68, cropFocalY: 0.72, label: 'LOW ANGLE', preferredGrade: 'vice-sunset' },
@@ -398,19 +480,20 @@ export function getSmartSinglePhotoTransform(panelIndex, _role, subjectAnchor = 
   } else if (idx === 1) {
     // CLOSE-UP: tight face/subject crop centered cleanly on detected anchor
     shot.cropFocalX = fx;
-    shot.cropFocalY = Math.max(0.18, Math.min(0.42, fy));
+    shot.cropFocalY = Math.max(0.18, Math.min(0.40, fy));
   } else if (idx === 2) {
-    // WIDE ANGLE: frame opposite coastal/background environment next to subject
-    shot.cropFocalX = fx >= 0.45 ? Math.max(0.10, fx - 0.42) : Math.min(0.90, fx + 0.42);
-    shot.cropFocalY = Math.max(0.14, fy - 0.08);
+    // LIFEGUARD BAY / WIDE ANGLE: frame opposite coastal horizon next to subject
+    shot.cropFocalX = fx >= 0.45 ? Math.max(0.21, fx - 0.35) : Math.min(0.79, fx + 0.35);
+    shot.cropFocalY = 0.34;
   } else if (idx === 3) {
-    // DETAIL CROP: explicitly keep anchored in lower foreground detail zone (e.g. vivid sports car)
-    shot.cropFocalX = fx >= 0.46 ? Math.max(0.26, Math.min(0.34, fx - 0.22)) : Math.min(0.74, Math.max(0.66, fx + 0.22));
-    shot.cropFocalY = 0.76;
+    // CAR DETAIL: anchor into lower foreground detail zone
+    shot.cropFocalX = fx >= 0.45 ? 0.14 : 0.86;
+    shot.cropFocalY = 0.72;
   } else if (idx === 4) {
-    // PROFILE: mirrored medium close-up around subject face
-    shot.cropFocalX = Math.min(0.84, fx + 0.04);
-    shot.cropFocalY = Math.max(0.18, fy + 0.04);
+    // PALM COAST: crisp palm skyline corner away from foreground subject
+    shot.cropFocalX = fx <= 0.55 ? 0.84 : 0.16;
+    shot.cropFocalY = 0.24;
+    shot.flipH = false;
   } else if (idx === 5) {
     shot.cropFocalX = fx <= 0.55 ? Math.min(0.86, fx + 0.24) : Math.max(0.14, fx - 0.24);
     shot.cropFocalY = Math.max(0.16, fy - 0.04);

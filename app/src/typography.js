@@ -234,9 +234,9 @@ export function renderHorizonSkylineBand(ctx, width, outerFrame, stageTop, bandH
   ctx.clip();
 
   const skyG = ctx.createLinearGradient(0, stageTop, 0, stageTop + bandH);
-  skyG.addColorStop(0, '#1B0A2E');
-  skyG.addColorStop(0.45, grade.footerGradient[1] || '#8F1E4E');
-  skyG.addColorStop(1, grade.footerGradient[2] || '#FF8A32');
+  skyG.addColorStop(0, '#110522');
+  skyG.addColorStop(0.48, '#380E3C');
+  skyG.addColorStop(1, '#782040');
   ctx.fillStyle = skyG;
   ctx.fillRect(bx, stageTop, bw, bandH);
 
@@ -825,7 +825,9 @@ export function renderCoverTypographyAndBadges(
   gutterPx = 10,
   topHeaderH = 0,
   horizonBandH = 0,
+  options = {},
 ) {
+  const { skipHorizonBand = false } = options;
   const grade = getGradeById(state.gradeId);
   const borderStyle = getBorderStyleById(state.borderStyle || 'twilight-gold');
   const titleText = (state.title || '').trim().toUpperCase();
@@ -853,9 +855,9 @@ export function renderCoverTypographyAndBadges(
   }
 
   // 2) Horizon Skyline Band or optional docked title band
-  if (horizonBandH > 0) {
+  if (horizonBandH > 0 && !skipHorizonBand) {
     renderHorizonSkylineBand(ctx, width, outerFrame, stageTop, horizonBandH, gutterPx, grade, borderStyle);
-  } else if (dockedTitleH > 0) {
+  } else if (horizonBandH === 0 && dockedTitleH > 0) {
     ctx.save();
     const bg = ctx.createLinearGradient(outerFrame, stageTop, width - outerFrame, stageBottom);
     bg.addColorStop(0, grade.titleStageGradient[0]);
@@ -905,23 +907,24 @@ export function renderCoverTypographyAndBadges(
 
     let titleSize = Math.round(
       horizonBandH > 0
-        ? Math.min(horizonBandH * 0.72, base * 0.205)
+        ? Math.min(horizonBandH * (aspect > 1.25 ? 0.78 : 0.68), base * (aspect > 1.25 ? 0.215 : 0.172))
         : dockedTitleH > 0
           ? dockedTitleH * (aspect > 1.25 ? 0.74 : 0.64)
           : base * (aspect > 1.25 ? 0.230 : aspect < 0.9 ? 0.215 : 0.205),
     );
 
+    const trackRatio = 0.013;
     ctx.save();
     ctx.font = `400 ${titleSize}px "Anton", Impact, sans-serif`;
     if (titleText) {
-      let measured = measureTextTracked(ctx, titleText, Math.round(titleSize * 0.024));
+      let measured = measureTextTracked(ctx, titleText, Math.round(titleSize * trackRatio));
       while (measured > maxTextW && titleSize > 48) {
         titleSize -= 2;
         ctx.font = `400 ${titleSize}px "Anton", Impact, sans-serif`;
-        measured = measureTextTracked(ctx, titleText, Math.round(titleSize * 0.024));
+        measured = measureTextTracked(ctx, titleText, Math.round(titleSize * trackRatio));
       }
     }
-    const finalTracking = Math.round(titleSize * 0.024);
+    const finalTracking = Math.round(titleSize * trackRatio);
     const titleW = titleText ? measureTextTracked(ctx, titleText, finalTracking) : 0;
     let scriptSize = Math.round(titleSize * (horizonBandH > 0 ? 0.34 : 0.35));
 
@@ -932,7 +935,7 @@ export function renderCoverTypographyAndBadges(
 
     if (horizonBandH > 0) {
       anchorX = width * 0.5;
-      titleY = stageTop + Math.round(horizonBandH * 0.61);
+      titleY = stageTop + Math.round(horizonBandH * (aspect <= 1.25 ? 0.66 : 0.61));
     } else if (dockedTitleH > 0) {
       anchorX = width * 0.5;
       titleY = stageTop + Math.round(dockedTitleH * 0.68);
@@ -1098,9 +1101,8 @@ export function renderCoverTypographyAndBadges(
       lctx.fillRect(0, ridgeY - 1.5, width, Math.max(2.2, titleSize * 0.018));
 
       const stripes = [
-        [0.32, 0.022],
-        [0.21, 0.026],
-        [0.10, 0.030],
+        [0.27, 0.018],
+        [0.13, 0.022],
       ];
       for (const [yFrac, hFrac] of stripes) {
         const syLine = localY - titleSize * yFrac;
@@ -1137,12 +1139,14 @@ export function renderCoverTypographyAndBadges(
 
       ctx.drawImage(layer, 0, bandTop);
 
-      // D) 2 Elegant 4-Point Lens-Gleam Sparkle Stars on peak glyph corners
+      // D) 4 Crisp 4-Point Lens-Gleam Sparkle Stars across peak title glyph positions
       const leftBound = textAlign === 'center' ? anchorX - titleW * 0.5 : anchorX;
       const rightBound = leftBound + titleW;
       const starTint = style === 'neon-chrome' ? 'rgba(92, 238, 255, 0.88)' : 'rgba(255, 226, 128, 0.88)';
       drawLensGleamStar(ctx, leftBound + titleSize * 0.055, titleY - titleSize * 0.74, Math.round(titleSize * 0.175), starTint);
-      drawLensGleamStar(ctx, rightBound - titleSize * 0.075, titleY - titleSize * 0.68, Math.round(titleSize * 0.135), starTint);
+      drawLensGleamStar(ctx, leftBound + titleW * 0.34, titleY - titleSize * 0.76, Math.round(titleSize * 0.115), starTint);
+      drawLensGleamStar(ctx, leftBound + titleW * 0.68, titleY - titleSize * 0.75, Math.round(titleSize * 0.120), starTint);
+      drawLensGleamStar(ctx, rightBound - titleSize * 0.075, titleY - titleSize * 0.68, Math.round(titleSize * 0.145), starTint);
 
       ctx.restore();
     }
@@ -1176,6 +1180,11 @@ export function renderCoverTypographyAndBadges(
       ctx.textBaseline = 'middle';
       ctx.lineJoin = 'round';
 
+      const isNeonChromeScript = style === 'neon-chrome';
+      const scriptColor = isNeonChromeScript ? '#FF75E8' : grade.scriptColor;
+      const scriptGlow = isNeonChromeScript ? 'rgba(255, 117, 232, 0.98)' : grade.scriptGlow;
+      const scriptSheen = isNeonChromeScript ? 'rgba(255, 255, 255, 0.94)' : 'rgba(255, 255, 255, 0.80)';
+
       const swX0 = -scriptW * 0.44;
       const swX1 = scriptW * 0.46;
       const swY0 = scriptSize * 0.44;
@@ -1190,27 +1199,27 @@ export function renderCoverTypographyAndBadges(
         ctx.lineWidth = lineW;
         ctx.strokeStyle = strokeColor;
         if (blur) {
-          ctx.shadowColor = grade.scriptGlow;
+          ctx.shadowColor = scriptGlow;
           ctx.shadowBlur = blur;
         }
         ctx.stroke();
         ctx.restore();
       };
       drawSwoosh(Math.max(7, scriptSize * 0.14), '#0B0612', 0);
-      drawSwoosh(Math.max(3.5, scriptSize * 0.082), grade.scriptColor, 24);
+      drawSwoosh(Math.max(3.5, scriptSize * 0.082), scriptColor, 24);
       drawSwoosh(Math.max(1.5, scriptSize * 0.026), 'rgba(255, 255, 255, 0.88)', 4);
 
       ctx.lineWidth = Math.max(8, Math.round(scriptSize * 0.21));
       ctx.strokeStyle = '#0B0612';
       ctx.strokeText(scriptText, 0, 0);
 
-      ctx.shadowColor = grade.scriptGlow;
+      ctx.shadowColor = scriptGlow;
       ctx.shadowBlur = 28;
-      ctx.fillStyle = grade.scriptColor;
+      ctx.fillStyle = scriptColor;
       ctx.fillText(scriptText, 0, 0);
 
       ctx.shadowBlur = 6;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.80)';
+      ctx.fillStyle = scriptSheen;
       ctx.fillText(scriptText, 0, -1);
       ctx.restore();
     }

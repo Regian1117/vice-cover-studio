@@ -1,6 +1,6 @@
-// Vice Cover Studio v4.1 — Offline Multi-Panel Cover Art Maker
-// Features: 8 slanted multi-panel layouts, 7 golden-hour & neon color grades, offline Canvas 2D
-// face-aware smart auto-crop (detectSubjectFocusAnchor), sculpted 19-step 3D typography, and 3-size PNG export.
+// Vice Cover Studio v5.0 — Offline Multi-Panel Cover Art Maker
+// Features: 9 slanted multi-panel layouts, 7 golden-hour & neon color grades, offline Canvas 2D
+// face-aware smart auto-crop (detectSubjectFocusAnchor), sculpted 23-step 3D typography, and 3-size PNG export.
 
 import { EXPORT_SIZES, MULTI_PANEL_LAYOUTS, FEATURED_LAYOUT_IDS, getLayoutById, hitTestPanel, getSmartSinglePhotoTransform } from './layouts.js';
 import { VICE_COLOR_GRADES, FEATURED_GRADE_IDS, PANEL_BORDER_STYLES, QUICK_PRESETS, getGradeById } from './grades.js';
@@ -22,24 +22,24 @@ let studioBooted = false;
 
 export const studioState = {
   sizeId: 'landscape',
-  layoutId: 'center-hero-7',
+  layoutId: 'grand-coast-8',
   gradeId: 'vice-sunset-gold',
   borderStyle: 'twilight-gold',
   presetId: 'sunset-gold',
   faceAutoCrop: true,
-  paintStrength: 0.72,
-  inkStrength: 0.58,
+  paintStrength: 0.84,
+  inkStrength: 0.68,
   gradeStrength: 0.92,
   halftoneStrength: 0.34,
   title: 'PALM HORIZON',
   script: 'Sunset Syndicate',
   pressQuote: '★★★★★ "PURE GOLDEN-HOUR ADRENALINE" — COASTAL WEEKLY',
-  subTagline: 'SEVEN STORIES · ONE COAST · NO WAY BACK',
+  subTagline: 'EIGHT STORIES · ONE COAST · NO WAY BACK',
   tagline: 'STARRING YOU & YOUR CREW · SHOT ON YOUR CAMERA',
   badge: 'VOL. 06',
   editionPill: 'COMING SOON',
   titleStyle: 'sunset-extrude',
-  titlePosition: 'overlay-bottom',
+  titlePosition: 'horizon-band',
   showRoleTags: true,
   showLocationStamps: false,
   showPressQuote: true,
@@ -135,7 +135,7 @@ export async function uploadUserPhotos(files, mode = 'multi') {
   return uploadedIds;
 }
 
-const SMART_CONTRAST_GRADES = ['vice-sunset-gold', 'tropical-cyan', 'vice-noir', 'midnight-neon', 'synth-chrome', 'golden-heatwave'];
+const SMART_CONTRAST_GRADES = ['vice-sunset-gold', 'tropical-cyan', 'golden-heatwave', 'vice-sunset', 'synth-chrome'];
 
 export function fillAllPanelsFromPhoto(photoId) {
   const layout = getLayoutById(studioState.layoutId);
@@ -150,7 +150,7 @@ export function fillAllPanelsFromPhoto(photoId) {
     const smart = getSmartSinglePhotoTransform(i, role, subjectAnchor);
     const gradeOverride = i === 0
       ? ''
-      : (contrastingGrades[(i - 1) % contrastingGrades.length] || smart.preferredGrade || '');
+      : (smart.preferredGrade || contrastingGrades[(i - 1) % contrastingGrades.length] || '');
     studioState.panels[i] = {
       photoId,
       zoom: smart.zoom,
@@ -1279,9 +1279,9 @@ async function bootStudio() {
     'neon-motel-rider',
     'supercar',
     'protagonist-dusk',
+    'yacht-chase',
     'neon-strip',
     'coast-aerial',
-    'yacht-chase',
   ].filter((id) => photoMap.has(id));
   const defaultHeroRoles = [
     'THE DRIVER · 6:42 PM',
@@ -1289,13 +1289,35 @@ async function bootStudio() {
     'THE RIDER',
     'THE GETAWAY',
     'THE INSIDER · 8:30 PM',
+    'THE YACHT',
     'THE STRIP',
-    'THE COURIER',
+    'THE COAST',
   ];
   distributePhotosAcrossPanels(heroOrder.length ? heroOrder : [...photoMap.keys()], defaultHeroRoles);
 
   applyQueryOverrides();
-  if (studioState.layoutId === 'center-hero-7' && studioState.sizeId === 'landscape') {
+  if (studioState.layoutId === 'grand-coast-8' && studioState.sizeId === 'landscape') {
+    if (studioState.panels[2]?.photoId === 'neon-motel-rider') {
+      studioState.panels[2].zoom = 1.24;
+      studioState.panels[2].panY = -0.16;
+    }
+    if (studioState.panels[3]?.photoId === 'supercar') {
+      studioState.panels[3].zoom = 1.28;
+      studioState.panels[3].panY = -0.18;
+    }
+    if (studioState.panels[5]?.photoId === 'yacht-chase') {
+      studioState.panels[5].zoom = 1.12;
+      studioState.panels[5].panY = -0.08;
+    }
+    if (studioState.panels[6]?.photoId === 'neon-strip') {
+      studioState.panels[6].zoom = 1.24;
+      studioState.panels[6].panY = -0.16;
+    }
+    if (studioState.panels[7]?.photoId === 'coast-aerial') {
+      studioState.panels[7].zoom = 1.22;
+      studioState.panels[7].panY = -0.14;
+    }
+  } else if (studioState.layoutId === 'center-hero-7' && studioState.sizeId === 'landscape') {
     if (studioState.panels[2]?.photoId === 'neon-motel-rider') {
       studioState.panels[2].zoom = 1.26;
       studioState.panels[2].panY = -0.20;

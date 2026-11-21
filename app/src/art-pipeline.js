@@ -150,10 +150,14 @@ export function computeAutoLevelsParams(buf, width, height, isNightGrade = false
     duskGamma = 1 + Math.min(0.68, ((medianLum - 100) / 135) * 0.92);
   } else if (!isNightGrade && medianLum > 118) {
     duskGamma = 1 + Math.min(0.54, ((medianLum - 116) / 135) * 0.80);
+  } else if (!isNightGrade && medianLum < 98) {
+    duskGamma = 1 - Math.min(0.32, ((98 - medianLum) / 98) * 0.38);
   } else if (medianLum < 84) {
     duskGamma = 1 - Math.min(0.20, ((84 - medianLum) / 84) * 0.26);
   }
-  const shadowLift = medianLum < 78 ? 0.032 : 0.012;
+  const shadowLift = !isNightGrade
+    ? (medianLum < 96 ? 0.066 : 0.012)
+    : (medianLum < 78 ? 0.032 : 0.012);
   return { low, invRange, duskGamma, shadowLift };
 }
 
@@ -201,14 +205,13 @@ export function applyViceColorGradeAndInk(
   const expBias = (grade.exposureBias || 0) * gradeMix;
 
   const autoLv = computeAutoLevelsParams(painted, width, height, isNightGrade);
-  const { low, invRange, duskGamma } = autoLv;
-  const shadowLift = autoLv.shadowLift * 0.55;
+  const { low, invRange, duskGamma, shadowLift } = autoLv;
   const paintMix = clamp01(paintStrength);
-  const levels = 7.5;
-  const posterMix = paintMix * 0.38;
-  const inkAlphaMax = clamp01(inkStrength) * 0.94;
-  const inkThresholdLow = 34;
-  const inkThresholdHigh = 116;
+  const levels = 6.0;
+  const posterMix = paintMix * 0.60;
+  const inkAlphaMax = clamp01(inkStrength) * 0.96;
+  const inkThresholdLow = 26;
+  const inkThresholdHigh = 90;
   const htAmt = clamp01(halftoneStrength);
   const htFreq = (Math.PI * 2) / (highRes ? 7.0 : 4.5);
   const cos45 = 0.70710678;
@@ -389,9 +392,9 @@ export function runPainterlySobelInkPipeline(
   const imgData = wctx.getImageData(0, 0, w, h);
   const src = imgData.data;
 
-  const radius = highRes ? 4 : 3;
+  const radius = 4;
   const painted = qPaint > 0.02
-    ? applyPainterlySmoothing(src, w, h, radius, 34)
+    ? applyPainterlySmoothing(src, w, h, radius, 46)
     : src;
 
   const edges = qInk > 0.02
