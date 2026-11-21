@@ -303,6 +303,8 @@ export const MULTI_PANEL_LAYOUTS = [
 
 export const LAYOUT_PRESETS = MULTI_PANEL_LAYOUTS;
 
+export const FEATURED_LAYOUT_IDS = ['hero-slant-6', 'vertical-poster-6', 'classic-box-5', 'center-hero-7'];
+
 export function getLayoutById(layoutId) {
   return MULTI_PANEL_LAYOUTS.find((l) => l.id === layoutId) || MULTI_PANEL_LAYOUTS[0];
 }
@@ -374,7 +376,54 @@ export const SMART_SINGLE_PHOTO_SHOTS = [
   { zoom: 1.96, panX: 0.0, panY: -0.02, rotation: 1.5, flipH: true, cropFocalX: 0.50, cropFocalY: 0.26, label: 'TIGHT CROP', preferredGrade: 'tropical-cyan' },
 ];
 
-export function getSmartSinglePhotoTransform(panelIndex, _role) {
-  const shot = SMART_SINGLE_PHOTO_SHOTS[panelIndex % SMART_SINGLE_PHOTO_SHOTS.length];
-  return { ...shot };
+export function getSmartSinglePhotoTransform(panelIndex, _role, subjectAnchor = null) {
+  const base = SMART_SINGLE_PHOTO_SHOTS[panelIndex % SMART_SINGLE_PHOTO_SHOTS.length];
+  const shot = { ...base };
+  if (!subjectAnchor) {
+    if (panelIndex % SMART_SINGLE_PHOTO_SHOTS.length === 0) {
+      shot.cropFocalX = 0.5;
+      shot.cropFocalY = 0.5;
+    }
+    return shot;
+  }
+
+  const fx = Math.max(0.18, Math.min(0.82, subjectAnchor.focalX ?? 0.52));
+  const fy = Math.max(0.16, Math.min(0.70, subjectAnchor.focalY ?? 0.25));
+  const idx = panelIndex % SMART_SINGLE_PHOTO_SHOTS.length;
+
+  if (idx === 0) {
+    // FULL SHOT: preserve complete portrait framing around subject anchor
+    shot.cropFocalX = fx;
+    shot.cropFocalY = Math.max(0.20, Math.min(0.42, fy + 0.02));
+  } else if (idx === 1) {
+    // CLOSE-UP: tight face/subject crop centered cleanly on detected anchor
+    shot.cropFocalX = fx;
+    shot.cropFocalY = Math.max(0.18, Math.min(0.42, fy));
+  } else if (idx === 2) {
+    // WIDE ANGLE: frame opposite coastal/background environment next to subject
+    shot.cropFocalX = fx >= 0.45 ? Math.max(0.10, fx - 0.42) : Math.min(0.90, fx + 0.42);
+    shot.cropFocalY = Math.max(0.14, fy - 0.08);
+  } else if (idx === 3) {
+    // DETAIL CROP: explicitly keep anchored in lower foreground detail zone (e.g. vivid sports car)
+    shot.cropFocalX = fx >= 0.46 ? Math.max(0.26, Math.min(0.34, fx - 0.22)) : Math.min(0.74, Math.max(0.66, fx + 0.22));
+    shot.cropFocalY = 0.76;
+  } else if (idx === 4) {
+    // PROFILE: mirrored medium close-up around subject face
+    shot.cropFocalX = Math.min(0.84, fx + 0.04);
+    shot.cropFocalY = Math.max(0.18, fy + 0.04);
+  } else if (idx === 5) {
+    shot.cropFocalX = fx <= 0.55 ? Math.min(0.86, fx + 0.24) : Math.max(0.14, fx - 0.24);
+    shot.cropFocalY = Math.max(0.16, fy - 0.04);
+  } else if (idx === 6) {
+    shot.cropFocalX = fx;
+    shot.cropFocalY = Math.min(0.64, fy + 0.20);
+  } else if (idx === 7) {
+    shot.cropFocalX = Math.min(0.80, fx + 0.16);
+    shot.cropFocalY = 0.72;
+  } else if (idx === 8) {
+    shot.cropFocalX = fx;
+    shot.cropFocalY = Math.max(0.18, Math.min(0.40, fy));
+  }
+
+  return shot;
 }

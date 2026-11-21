@@ -20,8 +20,39 @@ export const PANEL_BORDER_STYLES = [
 
 export const VICE_COLOR_GRADES = [
   {
-    id: 'vice-sunset',
+    id: 'vice-sunset-gold',
     name: 'Sunset Gold',
+    swatchGradient: 'linear-gradient(135deg, #1C102E 0%, #FF723E 52%, #FFE280 100%)',
+    swatches: ['#1C102E', '#FF723E', '#FFE280'],
+    shadowRgb: [28, 16, 46],
+    midRgb: [255, 114, 62],
+    highRgb: [255, 226, 128],
+    shadowMix: 0.44,
+    midMix: 0.34,
+    highMix: 0.34,
+    contrast: 1.34,
+    saturation: 1.38,
+    warmth: 0.14,
+    exposureBias: 0.04,
+    bloomColor: 'rgba(255, 178, 86, 0.24)',
+    vignetteRim: 'rgba(24, 12, 40, 0.46)',
+    rimGlow: 'rgba(255, 186, 88, 0.22)',
+    lightLeak: ['rgba(255, 152, 68, 0.20)', 'rgba(255, 224, 118, 0.18)', 'rgba(42, 18, 68, 0.20)'],
+    titleStageGradient: ['#1C102E', '#481A38', '#7A3224'],
+    titleGradient: ['#FFFDF0', '#FFE46B', '#FF8F3F', '#E6385C'],
+    scriptColor: '#FF4F8E',
+    scriptGlow: 'rgba(255, 58, 134, 0.94)',
+    badgeBg: '#FFD147',
+    badgeFg: '#14081A',
+    accentColor: '#FF8F3F',
+    footerGradient: ['#1C102E', '#A83244', '#FF993B'],
+    sunColors: ['#FFF8C4', '#FF723E'],
+    starburstBg: '#FFD447',
+    starburstFg: '#12081A',
+  },
+  {
+    id: 'vice-sunset',
+    name: 'Miami Sunset',
     swatchGradient: 'linear-gradient(135deg, #27104E 0%, #FF3B7F 52%, #FFC845 100%)',
     swatches: ['#27104E', '#FF3B7F', '#FFC845'],
     shadowRgb: [22, 8, 52],
@@ -209,11 +240,13 @@ export const VICE_COLOR_GRADES = [
 
 export const COLOR_GRADES = VICE_COLOR_GRADES;
 
+export const FEATURED_GRADE_IDS = ['vice-sunset-gold', 'midnight-neon', 'tropical-cyan', 'vice-noir'];
+
 export const QUICK_PRESETS = [
   {
     id: 'sunset-gold',
     label: 'Sunset Gold',
-    gradeId: 'vice-sunset',
+    gradeId: 'vice-sunset-gold',
     layoutId: 'center-hero-7',
     borderStyle: 'twilight-gold',
     paintStrength: 0.72,
@@ -224,7 +257,7 @@ export const QUICK_PRESETS = [
     script: 'Sunset Syndicate',
     pressQuote: '★★★★★ "PURE GOLDEN-HOUR ADRENALINE" — COASTAL WEEKLY',
     subTagline: 'SEVEN STORIES · ONE COAST · NO WAY BACK',
-    tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA',
+    tagline: 'STARRING YOU & YOUR CREW · SHOT ON YOUR CAMERA',
     badge: 'VOL. 06',
     editionPill: 'COMING SOON',
     titlePosition: 'overlay-bottom',
@@ -236,7 +269,7 @@ export const QUICK_PRESETS = [
     showPressQuote: true,
     showRoleTags: true,
     showLocationStamps: false,
-    starburstText: 'ORIGINAL COVER ART',
+    starburstText: 'ORIGINAL ARTWORK',
   },
   {
     id: 'midnight-neon',
@@ -252,7 +285,7 @@ export const QUICK_PRESETS = [
     script: 'Midnight Run',
     pressQuote: '★★★★★ "ELECTRIC NEON NOIR" — COASTAL WEEKLY',
     subTagline: 'NO SLEEP · ALL SPEED · AFTER MIDNIGHT',
-    tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA',
+    tagline: 'STARRING YOU & YOUR CREW · SHOT ON YOUR CAMERA',
     badge: 'VOL. 06',
     editionPill: 'COMING SOON',
     titlePosition: 'overlay-bottom',
@@ -264,7 +297,7 @@ export const QUICK_PRESETS = [
     showPressQuote: true,
     showRoleTags: true,
     showLocationStamps: false,
-    starburstText: 'ORIGINAL COVER ART',
+    starburstText: 'ORIGINAL ARTWORK',
   },
   {
     id: 'golden-heatwave',
@@ -280,7 +313,7 @@ export const QUICK_PRESETS = [
     script: 'The Syndicate',
     pressQuote: '★★★★★ "SUN-DRENCHED PERFECTION" — METRO REVIEW',
     subTagline: 'SIX PLAYERS · ONE SUMMER · HIGH STAKES',
-    tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA',
+    tagline: 'STARRING YOU & YOUR CREW · SHOT ON YOUR CAMERA',
     badge: 'VOL. 06',
     editionPill: '',
     titlePosition: 'horizon-band',
@@ -292,7 +325,7 @@ export const QUICK_PRESETS = [
     showPressQuote: true,
     showRoleTags: true,
     showLocationStamps: false,
-    starburstText: 'ORIGINAL COVER ART',
+    starburstText: 'ORIGINAL ARTWORK',
   },
   {
     id: 'crimson-noir',
@@ -308,7 +341,7 @@ export const QUICK_PRESETS = [
     script: 'City of Lights',
     pressQuote: '★★★★★ "PURE MIDNIGHT DRAMA" — METRO REVIEW',
     subTagline: 'FIVE NIGHTS · ONE CITY · ZERO MERCY',
-    tagline: '100% ORIGINAL COVER ART · SHOT ON YOUR CAMERA',
+    tagline: 'STARRING YOU & YOUR CREW · SHOT ON YOUR CAMERA',
     badge: 'NOIR CUT',
     editionPill: '',
     titlePosition: 'overlay-bottom',
@@ -320,7 +353,7 @@ export const QUICK_PRESETS = [
     showPressQuote: true,
     showRoleTags: true,
     showLocationStamps: false,
-    starburstText: 'ORIGINAL COVER ART',
+    starburstText: 'ORIGINAL ARTWORK',
   },
 ];
 

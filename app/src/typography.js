@@ -368,12 +368,6 @@ export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH,
     const bx = fx + i * bldgW;
     const by = fy + fh - bh;
     ctx.fillRect(bx - 0.5, by, bldgW + 1, bh + 2);
-    if (i % 3 === 1 && bh > fh * 0.25) {
-      ctx.fillStyle = grade.sunColors[0];
-      ctx.fillRect(bx + bldgW * 0.28, by + fh * 0.05, Math.max(2, bldgW * 0.14), Math.max(2, fh * 0.04));
-      ctx.fillRect(bx + bldgW * 0.56, by + fh * 0.09, Math.max(2, bldgW * 0.14), Math.max(2, fh * 0.04));
-      ctx.fillStyle = '#090510';
-    }
   }
 
   drawPalmSilhouette(ctx, fx + fw * 0.17, fy + fh, fh * 0.90, -fh * 0.18, 1);
@@ -399,16 +393,17 @@ export function renderPosterFooterStrip(ctx, width, height, outerFrame, footerH,
   let tagLeftBound = tagX;
 
   if (taglineText) {
-    let tagSize = Math.max(15, Math.round(fh * 0.42));
-    let tagTracking = Math.round(tagSize * 0.14);
+    let tagSize = Math.max(14, Math.round(fh * 0.40));
+    let tagTracking = Math.round(tagSize * 0.12);
     const maxTagHalfW = showSideItems
-      ? Math.min(bx - tagX - Math.round(fw * 0.025), tagX - (fx + padSide) - Math.round(fw * 0.19))
+      ? Math.min(bx - tagX - Math.round(fw * 0.022), tagX - (fx + padSide) - Math.round(fw * 0.175))
       : fw * 0.44;
+    const minRuleReserve = showSideItems ? Math.round(fw * 0.026) : Math.round(fw * 0.020);
     ctx.font = `700 ${tagSize}px "Bebas Neue", sans-serif`;
     let tagW = measureTextTracked(ctx, taglineText, tagTracking);
-    while (tagW * 0.5 > maxTagHalfW && tagSize > 11) {
+    while (tagW * 0.5 + minRuleReserve > maxTagHalfW && tagSize > 11) {
       tagSize -= 1;
-      tagTracking = Math.round(tagSize * 0.12);
+      tagTracking = Math.round(tagSize * 0.10);
       ctx.font = `700 ${tagSize}px "Bebas Neue", sans-serif`;
       tagW = measureTextTracked(ctx, taglineText, tagTracking);
     }
@@ -645,15 +640,15 @@ export function renderCornerBadges(ctx, width, outerFrame, badgeText, editionPil
   ctx.restore();
 }
 
-// Large High-Contrast Gold & Black-Ringed "ORIGINAL COVER ART" Sunburst Seal
+// Large High-Contrast Gold & Black-Ringed "ORIGINAL ARTWORK" Sunburst Seal
 export function renderLargeGoldSunburstSeal(ctx, cx, cy, outerR, starburstText) {
   const innerR = outerR * 0.78;
   const points = 20;
   const totalVerts = points * 2;
-  const label = (starburstText || 'ORIGINAL COVER ART').trim().toUpperCase();
+  const label = (starburstText || 'ORIGINAL ARTWORK').trim().toUpperCase();
   const words = label.split(/\s+/).filter(Boolean);
   const line1 = words.length > 1 ? words[0] : label;
-  const line2 = words.length > 1 ? words.slice(1).join(' ') : 'COVER ART';
+  const line2 = words.length > 1 ? words.slice(1).join(' ') : 'ARTWORK';
 
   ctx.save();
   ctx.translate(cx, cy);
@@ -693,17 +688,17 @@ export function renderLargeGoldSunburstSeal(ctx, cx, cy, outerR, starburstText) 
   ctx.lineWidth = Math.max(2.2, outerR * 0.042);
   ctx.stroke();
 
-  const fs1 = Math.max(12, Math.round(outerR * 0.30));
-  const fs2 = Math.max(11, Math.round(outerR * 0.26));
+  const fs1 = Math.max(13, Math.round(outerR * 0.34));
+  const fs2 = Math.max(12, Math.round(outerR * 0.30));
   ctx.fillStyle = '#0B0612';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
   ctx.font = `700 ${fs1}px "Bebas Neue", sans-serif`;
-  ctx.fillText(`★ ${line1} ★`, 0, -fs1 * 0.42, innerR * 1.48);
+  ctx.fillText(line1, 0, -fs1 * 0.38, innerR * 1.48);
 
   ctx.font = `700 ${fs2}px "Bebas Neue", sans-serif`;
-  ctx.fillText(line2, 0, fs2 * 0.58, innerR * 1.48);
+  ctx.fillText(line2, 0, fs2 * 0.56, innerR * 1.48);
 
   ctx.restore();
 }
@@ -904,15 +899,16 @@ export function renderCoverTypographyAndBadges(
     const hasSubPill = Boolean(subTaglineText);
 
     const innerW = width - outerFrame * 2;
-    const widthFrac = aspect > 1.25 ? 0.815 : aspect < 0.90 ? 0.86 : 0.83;
-    const maxTextW = innerW * widthFrac;
+    const maxTextW = aspect < 0.90
+      ? Math.min(innerW - 16, width * 0.88)
+      : innerW * (aspect > 1.25 ? 0.815 : 0.83);
 
     let titleSize = Math.round(
       horizonBandH > 0
         ? Math.min(horizonBandH * 0.72, base * 0.205)
         : dockedTitleH > 0
           ? dockedTitleH * (aspect > 1.25 ? 0.74 : 0.64)
-          : base * (aspect > 1.25 ? 0.218 : aspect < 0.9 ? 0.195 : 0.205),
+          : base * (aspect > 1.25 ? 0.218 : aspect < 0.9 ? 0.215 : 0.205),
     );
 
     ctx.save();
@@ -999,13 +995,13 @@ export function renderCoverTypographyAndBadges(
       ctx.miterLimit = 2;
 
       const strokeW = Math.max(11, Math.round(titleSize * 0.132));
-      const extrudeSteps = style === 'clean-ink' ? 5 : 15;
-      const extrudeX = titleSize * 0.0112;
-      const extrudeY = titleSize * 0.0138;
+      const extrudeSteps = style === 'clean-ink' ? 6 : 19;
+      const extrudeX = titleSize * 0.0096;
+      const extrudeY = titleSize * 0.0120;
 
-      // A) Deep 3D obsidian-plum extrusion
+      // A) Deep 19-step obsidian-plum 3D extrusion
       for (let s = extrudeSteps; s >= 1; s--) {
-        const shade = s > 10 ? '#24093E' : s > 5 ? '#120522' : '#06020C';
+        const shade = s > 13 ? '#260A42' : s > 7 ? '#150628' : '#07020E';
         ctx.fillStyle = shade;
         ctx.strokeStyle = shade;
         ctx.lineWidth = strokeW;
@@ -1022,9 +1018,9 @@ export function renderCoverTypographyAndBadges(
         ctx.shadowBlur = 0;
       }
 
-      // B) Warm champagne-gold outer contour + heavy matte black comic keyline
-      ctx.strokeStyle = '#FFF6D6';
-      ctx.lineWidth = strokeW * 1.14;
+      // B) Warm champagne-gold bevel rim contour + heavy matte black comic keyline
+      ctx.strokeStyle = '#FFF8DC';
+      ctx.lineWidth = strokeW * 1.15;
       drawTextTracked(ctx, titleText, anchorX, titleY, finalTracking, 'stroke');
 
       ctx.strokeStyle = '#07040D';
@@ -1079,13 +1075,16 @@ export function renderCoverTypographyAndBadges(
         fillGrad.addColorStop(0.76, '#FF47C4');
         fillGrad.addColorStop(1.00, '#B01AE8');
       } else {
-        fillGrad.addColorStop(0.00, '#FFFFFF');
-        fillGrad.addColorStop(0.32, '#FFF5B8');
+        const tg = Array.isArray(grade.titleGradient) && grade.titleGradient.length >= 4
+          ? grade.titleGradient
+          : ['#FFFDF0', '#FFE46B', '#FF8F3F', '#E6385C'];
+        fillGrad.addColorStop(0.00, tg[0]);
+        fillGrad.addColorStop(0.32, tg[1]);
         fillGrad.addColorStop(0.48, '#FFC938');
-        fillGrad.addColorStop(0.505, '#360B3E');
-        fillGrad.addColorStop(0.54, '#FF7D34');
-        fillGrad.addColorStop(0.78, '#FF2E78');
-        fillGrad.addColorStop(1.00, '#B8146C');
+        fillGrad.addColorStop(0.505, '#2E0A38');
+        fillGrad.addColorStop(0.54, tg[2]);
+        fillGrad.addColorStop(0.78, tg[3]);
+        fillGrad.addColorStop(1.00, '#9E1442');
       }
 
       lctx.fillStyle = fillGrad;
@@ -1095,8 +1094,8 @@ export function renderCoverTypographyAndBadges(
 
       // Horizontal retro horizon bevel ridge + 3 lower horizon stripes
       const ridgeY = localY - titleSize * 0.42;
-      lctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
-      lctx.fillRect(0, ridgeY - 1.5, width, Math.max(2, titleSize * 0.016));
+      lctx.fillStyle = 'rgba(255, 255, 255, 0.80)';
+      lctx.fillRect(0, ridgeY - 1.5, width, Math.max(2.2, titleSize * 0.018));
 
       const stripes = [
         [0.32, 0.022],
@@ -1108,20 +1107,20 @@ export function renderCoverTypographyAndBadges(
         const shLine = Math.max(2, titleSize * hFrac);
         lctx.fillStyle = 'rgba(18, 4, 34, 0.34)';
         lctx.fillRect(0, syLine, width, shLine);
-        lctx.fillStyle = 'rgba(255, 248, 224, 0.40)';
+        lctx.fillStyle = 'rgba(255, 248, 224, 0.44)';
         lctx.fillRect(0, syLine + shLine, width, Math.max(1.2, titleSize * 0.010));
       }
 
-      // Upper chrome specular sheen
+      // Upper chrome specular sheen + crisp top-left bevel rim highlight
       const sheenGrad = lctx.createLinearGradient(0, localY - titleSize * 0.88, 0, localY - titleSize * 0.44);
-      sheenGrad.addColorStop(0, 'rgba(255, 255, 255, 0.72)');
-      sheenGrad.addColorStop(0.85, 'rgba(255, 255, 255, 0.18)');
+      sheenGrad.addColorStop(0, 'rgba(255, 255, 255, 0.78)');
+      sheenGrad.addColorStop(0.85, 'rgba(255, 255, 255, 0.20)');
       sheenGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
       lctx.fillStyle = sheenGrad;
       lctx.fillRect(0, 0, width, bandH);
 
-      lctx.lineWidth = Math.max(2.5, titleSize * 0.018);
-      lctx.strokeStyle = 'rgba(255, 253, 236, 0.72)';
+      lctx.lineWidth = Math.max(2.8, titleSize * 0.020);
+      lctx.strokeStyle = 'rgba(255, 254, 240, 0.84)';
       drawTextTracked(lctx, titleText, anchorX - 1.5, localY + 2, finalTracking, 'stroke');
 
       ctx.drawImage(layer, 0, bandTop);

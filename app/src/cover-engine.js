@@ -7,6 +7,135 @@ import { getGradeById, getBorderStyleById } from './grades.js';
 import { runPainterlySobelInkPipeline, getPosterGrainCanvas } from './art-pipeline.js';
 import { renderCoverTypographyAndBadges } from './typography.js';
 
+const subjectAnchorCache = new Map();
+
+// Fast deterministic offline face & subject salience detector (64x64 Canvas 2D YCbCr skin-hue + Sobel edge heatmap)
+export function detectSubjectFocusAnchor(img, cacheKey = '') {
+  if (cacheKey && subjectAnchorCache.has(cacheKey)) {
+    return subjectAnchorCache.get(cacheKey);
+  }
+  const S = 64;
+  const off = document.createElement('canvas');
+  off.width = S;
+  off.height = S;
+  const octx = off.getContext('2d', { willReadFrequently: true });
+  octx.drawImage(img, 0, 0, S, S);
+  const { data } = octx.getImageData(0, 0, S, S);
+
+  const lum = new Float32Array(S * S);
+  const skin = new Float32Array(S * S);
+  const sat = new Float32Array(S * S);
+
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const idx = y * S + x;
+      const p = idx * 4;
+      const r = data[p];
+      const g = data[p + 1];
+      const b = data[p + 2];
+      lum[idx] = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+      const maxC = Math.max(r, g, b);
+      const minC = Math.min(r, g, b);
+      const s = maxC > 0 ? (maxC - minC) / maxC : 0;
+      sat[idx] = s;
+
+      // YCbCr skin-hue model with car-paint / vivid crimson suppression
+      const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+      const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+      if (r > 70 && g > 40 && b > 20 && r > g && r > b && (r - b) > 12) {
+        const cbScore = Math.exp(-Math.pow((cb - 104) / 14, 2));
+        const crScore = Math.exp(-Math.pow((cr - 151) / 13, 2));
+        const paintDamp = (r - g) > 82 || s > 0.72 ? 0.15 : 1.0;
+        skin[idx] = cbScore * crScore * paintDamp;
+      }
+    }
+  }
+
+  const edge = new Float32Array(S * S);
+  for (let y = 1; y < S - 1; y++) {
+    const row = y * S;
+    for (let x = 1; x < S - 1; x++) {
+      const i = row + x;
+      const gx = -lum[i - S - 1] - 2 * lum[i - 1] - lum[i + S - 1] + lum[i - S + 1] + 2 * lum[i + 1] + lum[i + S + 1];
+      const gy = -lum[i - S - 1] - 2 * lum[i - S] - lum[i - S + 1] + lum[i + S - 1] + 2 * lum[i + S] + lum[i + S + 1];
+      edge[i] = Math.min(1, Math.sqrt(gx * gx + gy * gy) * 1.4);
+    }
+  }
+
+  const skinMap = new Float32Array(S * S);
+  const edgeMap = new Float32Array(S * S);
+  let totalSkin = 0;
+
+  for (let y = 2; y < S - 2; y++) {
+    const ny = (y + 0.5) / S;
+    const yFacePrior = Math.exp(-Math.pow((ny - 0.28) / 0.20, 2));
+    const ySalPrior = Math.exp(-Math.pow((ny - 0.40) / 0.30, 2));
+    for (let x = 2; x < S - 2; x++) {
+      const nx = (x + 0.5) / S;
+      const xPrior = 0.65 + 0.35 * Math.exp(-Math.pow((nx - 0.5) / 0.34, 2));
+      const idx = y * S + x;
+      const sw = skin[idx] * yFacePrior * xPrior * (0.55 + 0.90 * edge[idx]);
+      skinMap[idx] = sw;
+      totalSkin += sw;
+      edgeMap[idx] = edge[idx] * ySalPrior * xPrior * (0.45 + 0.55 * sat[idx]);
+    }
+  }
+
+  // Smooth 7x7 window accumulation to locate strongest cohesive region
+  const useSkin = totalSkin > 8.0;
+  const srcMap = useSkin ? skinMap : edgeMap;
+  const smooth = new Float32Array(S * S);
+  let peakVal = 0;
+
+  for (let y = 3; y < S - 3; y++) {
+    for (let x = 3; x < S - 3; x++) {
+      let acc = 0;
+      for (let dy = -3; dy <= 3; dy++) {
+        const rOff = (y + dy) * S + x;
+        for (let dx = -3; dx <= 3; dx++) {
+          acc += srcMap[rOff + dx];
+        }
+      }
+      const idx = y * S + x;
+      smooth[idx] = acc;
+      if (acc > peakVal) peakVal = acc;
+    }
+  }
+
+  let sumW = 0;
+  let sumX = 0;
+  let sumY = 0;
+  const thresh = peakVal * 0.52;
+  for (let y = 3; y < S - 3; y++) {
+    const ny = (y + 0.5) / S;
+    for (let x = 3; x < S - 3; x++) {
+      const v = smooth[y * S + x];
+      if (v >= thresh && v > 0) {
+        const w = v * v;
+        sumW += w;
+        sumX += ((x + 0.5) / S) * w;
+        sumY += ny * w;
+      }
+    }
+  }
+
+  const rawX = sumW > 0 ? sumX / sumW : 0.5;
+  const rawY = sumW > 0 ? sumY / sumW : (useSkin ? 0.30 : 0.44);
+  const confidence = useSkin
+    ? Math.min(0.98, Math.max(0.35, peakVal / 16))
+    : Math.min(0.75, Math.max(0.20, peakVal / 20));
+
+  const result = {
+    focalX: Number(Math.max(0.18, Math.min(0.82, rawX)).toFixed(4)),
+    focalY: Number(Math.max(0.16, Math.min(0.72, rawY)).toFixed(4)),
+    confidence: Number(confidence.toFixed(3)),
+  };
+
+  if (cacheKey) subjectAnchorCache.set(cacheKey, result);
+  return result;
+}
+
 export function tracePolygon(ctx, pts) {
   ctx.beginPath();
   for (let i = 0; i < pts.length; i++) {
@@ -16,7 +145,7 @@ export function tracePolygon(ctx, pts) {
   ctx.closePath();
 }
 
-export function drawPanelPhoto(ctx, styledCanvas, panelBounds, panelState, photoEntry) {
+export function drawPanelPhoto(ctx, styledCanvas, panelBounds, panelState, photoEntry, faceAutoCrop = true) {
   const { w, h, cx, cy } = panelBounds;
   const imgW = styledCanvas.width;
   const imgH = styledCanvas.height;
@@ -33,8 +162,10 @@ export function drawPanelPhoto(ctx, styledCanvas, panelBounds, panelState, photo
   const drawW = imgW * finalScale;
   const drawH = imgH * finalScale;
 
-  const focalX = panelState.cropFocalX ?? photoEntry?.focalX ?? 0.5;
-  const focalY = panelState.cropFocalY ?? photoEntry?.focalY ?? 0.44;
+  const autoX = faceAutoCrop ? (photoEntry?.focalX ?? photoEntry?.detectedAnchor?.focalX ?? 0.5) : 0.5;
+  const autoY = faceAutoCrop ? (photoEntry?.focalY ?? photoEntry?.detectedAnchor?.focalY ?? 0.44) : 0.5;
+  const focalX = panelState.cropFocalX ?? autoX;
+  const focalY = panelState.cropFocalY ?? autoY;
   const maxShiftX = Math.max(0, (drawW - reqW) * 0.5);
   const maxShiftY = Math.max(0, (drawH - reqH) * 0.5);
 
@@ -308,7 +439,7 @@ function renderPanelArtwork(ctx, geom, pState, photoEntry, effectiveGradeId, sta
       state.halftoneStrength ?? 0.34,
       isExport,
     );
-    drawPanelPhoto(ctx, styled, geom.bounds, pState, photoEntry);
+    drawPanelPhoto(ctx, styled, geom.bounds, pState, photoEntry, state.faceAutoCrop !== false);
   } else {
     const pg = ctx.createLinearGradient(
       geom.bounds.x, geom.bounds.y,
